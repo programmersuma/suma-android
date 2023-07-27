@@ -269,8 +269,8 @@ class SuggestionController extends Controller
     public function UseSuggestion(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'ms_dealer_id' => 'required|int',
-                'list_item' => 'required'
+                'ms_dealer_id'  => 'required',
+                'list_item'     => 'required'
             ]);
 
             if($validate->fails()) {
@@ -283,6 +283,7 @@ class SuggestionController extends Controller
 
             $sql = DB::table('user_api_sessions')->lock('with (nolock)')
                     ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
+                                isnull(users.user_id, '') as user_id,
                                 isnull(users.role_id, '') as role_id,
                                 isnull(users.user_id, '') as user_id,
                                 isnull(users.companyid, '') as companyid")
@@ -297,44 +298,62 @@ class SuggestionController extends Controller
                 return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
             }
 
+            $user_id = strtoupper(trim($sql->user_id));
             $role_id = strtoupper(trim($sql->role_id));
             $companyid = strtoupper(trim($sql->companyid));
 
+            $sql = DB::table('msdealer')->lock('with (nolock)')
+                    ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
+                    ->where('msdealer.id', $request->get('ms_dealer_id'))
+                    ->where('msdealer.companyid', strtoupper(trim($companyid)))
+                    ->first();
+
+            if(empty($sql->kode_dealer)) {
+                return ApiResponse::responseWarning('Kode dealer tidak terdaftar, hubungi IT Programmer');
+            }
+
+            $kode_dealer = strtoupper(trim($sql->kode_dealer));
+
+            DB::transaction(function () use ($kode_dealer, $user_id, $companyid) {
+                DB::delete("delete
+                            from    cart_dtlsuggesttmp
+                            where   cart_dtlsuggesttmp.user_id=? and
+                                    cart_dtlsuggesttmp.kd_dealer=? and
+                                    cart_dtlsuggesttmp.companyid=?", [
+                                        strtoupper(trim($user_id)),
+                                        strtoupper(trim($kode_dealer)),
+                                        strtoupper(trim($companyid)),
+                                    ]);
+            });
+
             if($request->get('list_item')) {
-                $token = $request->header('Authorization');
-                $formatToken = explode(" ", $token);
-                $access_token = trim($formatToken[1]);
-
-                $sql = "select	user_api_sessions.user_id, user_api_sessions.id_user, users.jabatan, users.role_id, role.deskripsi_role,
-                                users.companyid
-                        from
-                        (
-                            select	user_api_sessions.user_id, user_api_sessions.id_user
-                            from    user_api_sessions with (nolock)
-                            where	session_id=:session_id
-                        )	user_api_sessions
-                                inner join users with (nolock) on user_api_sessions.user_id=users.user_id
-                                left join role with (nolock) on users.role_id=role.role_id";
-
-                $result_user = collect(DB::select($sql, [':session_id' => $access_token ]))->first();
-                $user_id = trim($result_user->user_id);
-                $companyid = trim($result_user->companyid);
-
                 $list_part = json_decode($request->get('list_item'));
+                $list_part_suggest = [];
+                $part_id_suggest = '';
 
                 foreach($list_part as $result) {
-                    $sql = DB::table('mspart')->lock('with (nolock)')
-                            ->where('id', $result->part_id)
-                            ->first();
-
-                    $part_number = trim($sql->kd_part);
-
-                    DB::transaction(function () use ($user_id, $result, $part_number, $companyid) {
-                        DB::insert("exec SP_CartDtlTmp_Ins ?,?,?,?,?,?",
-                            [ trim($user_id), trim($user_id), trim($part_number),
-                                $result->qty, 0, $companyid ]);
-                    });
+                    if(trim($part_id_suggest) == '') {
+                        $part_id_suggest = (int)$result->part_id;
+                    } else {
+                        $part_id_suggest .= ",".(int)$result->part_id;
+                    }
                 }
+                dd($part_id_suggest);
+                foreach($list_part as $result) {
+                    $list_part_suggest[] = [
+                        'user_id'   => strtoupper(trim($user_id)),
+                        'kd_dealer' => strtoupper(trim($kode_dealer)),
+                        'part_id'   => (int)$result->part_id,
+                        'qty'       => (double)$result->qty,
+                        'companyid' => strtoupper(trim($companyid))
+                    ];
+                }
+
+                DB::transaction(function () use ($list_part_suggest) {
+                    DB::table('cart_dtlsuggest')->insert($list_part_suggest);
+                });
+
+
                 return ApiResponse::responseSuccess('success', $request->all());
             }
         } catch (\Exception $exception) {
