@@ -69,7 +69,7 @@ class AuthController extends Controller {
                 return ApiResponse::responseWarning('Alamat email atau password salah');
             }
 
-            if(!Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            if(!Auth::attempt(['email' => $sql->email, 'password' => $request->password])) {
                 return ApiResponse::responseWarning('Alamat email atau password salah');
             }
 

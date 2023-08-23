@@ -33,6 +33,10 @@ Route::group(['middleware' => 'authBasic'], function() {
     Route::controller(AuthController::class)->group(function () {
         Route::post('oauth/token', 'oauthToken');
     });
+
+    Route::controller(NotificationController::class)->group(function () {
+        Route::post('notification/push', 'pushNotification');
+    });
 });
 
 Route::group(['middleware' => 'checkToken'], function() {
