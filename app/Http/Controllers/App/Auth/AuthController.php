@@ -9,12 +9,14 @@ use Illuminate\Http\Request;
 
 class AuthController extends Controller {
 
-    protected function oauthToken() {
+    protected function oauthToken(Request $request) {
         try {
             $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
             $url = 'oauth/token';
             $header = [ 'Authorization' => $credential ];
-            $body = [];
+            $body = [
+                'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
@@ -29,7 +31,9 @@ class AuthController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'email'     => $request->get('email'),
-                'password'  => $request->get('password')
+                'password'  => $request->get('password'),
+                'regid'     => $request->get('regid'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -44,7 +48,8 @@ class AuthController extends Controller {
             $url = 'auth/forgot-password';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'email'     => $request->get('email')
+                'email'     => $request->get('email'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -59,7 +64,8 @@ class AuthController extends Controller {
             $url = 'oauth/renew';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'password'  => $request->get('password')
+                'password'  => $request->get('password'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -73,7 +79,9 @@ class AuthController extends Controller {
         try {
             $url = 'profile/profile';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
-            $body = [];
+            $body = [
+                'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
@@ -89,7 +97,8 @@ class AuthController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'password'      => $request->get('password'),
-                'new_password'  => $request->get('new_password')
+                'new_password'  => $request->get('new_password'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -103,7 +112,9 @@ class AuthController extends Controller {
         try {
             $url = 'auth/logout';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
-            $body = [];
+            $body = [
+                'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;

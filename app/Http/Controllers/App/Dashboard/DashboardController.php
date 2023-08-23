@@ -15,12 +15,12 @@ class DashboardController extends Controller
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'category'      => $request->get('category'),
-                'divisi'        => $request->get('divisi'),
                 'year'          => $request->get('year'),
                 'month'         => $request->get('month'),
                 'item_group'    => $request->get('item_group'),
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'company'       => $request->get('company'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

@@ -18,16 +18,25 @@ class AuthController extends Controller {
 
     protected function oauthToken(Request $request) {
         try {
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required|string',
+            ]);
+
+            if ($validate->fails()) {
+                return ApiResponse::responseWarning('Data divisi tidak boleh kosong');
+            }
             $user_agent = 'Suma API - Android';
             $ip_address = $request->ip();
             $token = base64_encode(sha1($request->email.time().$request->password));
 
-            DB::transaction(function () use ($ip_address, $user_agent, $token) {
-                DB::insert('insert into user_api_tokens (user_agent, ip_address, token, date_expired, expired_at) values (?,?,?,?,?)',
-                    [ $user_agent, $ip_address, $token, date('Y-m-d H:i:s', strtotime('+1 day')), time() + 24 * 60 * 60 ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $ip_address, $user_agent, $token) {
+                DB::connection($request->get('divisi'))
+                    ->insert('insert into user_api_tokens (user_agent, ip_address, token, date_expired, expired_at) values (?,?,?,?,?)',
+                            [ $user_agent, $ip_address, $token, date('Y-m-d H:i:s', strtotime('+1 day')), time() + 24 * 60 * 60 ]);
             });
 
-            $sql = DB::table('user_api_tokens')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('user_api_tokens')->lock('with (nolock)')
                     ->where('token', $token)
                     ->first();
 
@@ -42,14 +51,16 @@ class AuthController extends Controller {
         try {
             $validate = Validator::make($request->all(), [
                 'email'     => 'required|string',
-                'password'  => 'required|string'
+                'password'  => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Email dan password tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, email, dan password tidak boleh kosong');
             }
 
-            $sql = DB::table('users')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('users')->lock('with (nolock)')
                     ->where('email', $request->get('email'))
                     ->orWhere('user_id', $request->get('email'))
                     ->first();
@@ -70,13 +81,16 @@ class AuthController extends Controller {
             $user_id = strtoupper(trim($sql->user_id));
             $companyid = strtoupper(trim($sql->companyid));
 
-            DB::transaction(function () use ($sql, $access_token, $request) {
-                DB::insert('exec SP_UserApiSession_Simpan ?,?,?,?,?,?,?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $sql, $access_token) {
+                DB::connection($request->get('divisi'))
+                    ->insert('exec SP_UserApiSession_Simpan ?,?,?,?,?,?,?', [
                         $access_token, $request->get('regid'), strtoupper(trim($sql->user_id)), 'Suma API - Android',
                         $request->ip(), strtoupper(trim($sql->id)), strtoupper(trim($sql->companyid))
                     ]
                 );
             });
+
+            $divisiId = (strtoupper(trim($request->get('divisi'))) == 'SQLSRV_HONDA') ? 'HONDA' : 'GENERAL';
 
             $sql = "select	top 1 isnull(user_sessions.session_id, '') as session_id, isnull(dealer.kd_dealer, 0) as ms_dealer_id,
                             isnull(rtrim(msdealer.id), 0) as dealer_id, isnull(rtrim(dealer.nm_dealer), '') as dealer_name,
@@ -84,19 +98,21 @@ class AuthController extends Controller {
                             isnull(rtrim(users.jabatan), '') as job, isnull(rtrim(users.role_id), '') as id_role,
                             isnull(rtrim(users.photo), '') as photo, isnull(rtrim(users.name), '') as name,
                             isnull(rtrim(users.telepon), '') as phone_number, isnull(rtrim(users.email), '') as email,
-                            isnull(rtrim(users.companyid), '') as company, isnull(company.inisial, 0) as 'kantor_pusat'
+                            isnull(rtrim(users.companyid), '') as company, isnull(company.inisial, 0) as kantor_pusat,
+                            '".strtoupper(trim($divisiId))."' as divisi
                     from
                     (
                         select	top 1 id, session_id, user_id, user_agent, ip
                         from	user_api_sessions with (nolock)
-                        where	user_api_sessions.session_id='".$access_token."'
+                        where	user_api_sessions.session_id='".trim($access_token)."'
                     )	user_sessions
                             left join users with (nolock) on user_sessions.user_id=users.user_id
                             left join role with (nolock) on users.role_id=role.role_id
                             left join company with (nolock) on users.companyid=company.companyid ";
 
-            if ($role_id === 'D_H3') {
-                $sql .= " left join dealer with (nolock) on users.user_id=dealer.kd_dealer and users.companyid=dealer.companyid ";
+            if (strtoupper(trim($role_id)) === 'D_H3') {
+                $sql .= " left join dealer with (nolock) on users.user_id=dealer.kd_dealer and
+                                        users.companyid=dealer.companyid ";
             } else {
                 $sql .= " left join
                         (
@@ -104,12 +120,14 @@ class AuthController extends Controller {
                             from    dealer with (nolock)
                             where   dealer.kd_sales='".strtoupper(trim($user_id))."' and
                                     dealer.companyid='".strtoupper(trim($companyid))."'
-                        )  dealer on user_sessions.user_id=dealer.kd_sales and '".strtoupper(trim($companyid))."'=dealer.companyid ";
+                        )  dealer on user_sessions.user_id=dealer.kd_sales and
+                                        '".strtoupper(trim($companyid))."'=dealer.companyid ";
             }
 
-            $sql .= " left join msdealer with (nolock) on dealer.kd_dealer=msdealer.kd_dealer and users.companyid=msdealer.companyid ";
+            $sql .= " left join msdealer with (nolock) on dealer.kd_dealer=msdealer.kd_dealer and
+                                    users.companyid=msdealer.companyid ";
 
-            $result = collect(DB::select($sql))->first();
+            $result = collect(DB::connection($request->get('divisi'))->select($sql))->first();
 
             return ApiResponse::responseSuccess('Signed In Successfully', $result);
         } catch (\Exception $exception) {
@@ -121,14 +139,16 @@ class AuthController extends Controller {
     protected function forgotPassword(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'email' => 'required|string'
+                'email'     => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Alamat email tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi dan email tidak boleh kosong');
             }
 
-            $sql = DB::table('users')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('users')->lock('with (nolock)')
                     ->where('email', $request->get('email'))
                     ->first();
 
@@ -154,10 +174,9 @@ class AuthController extends Controller {
                 $message->subject($data['subject']);
             });
 
-            DB::transaction(function () use ($password, $sql) {
-                DB::update('update users set password=? where email=?', [
-                    bcrypt($password), trim($sql->email)
-                ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $password, $sql) {
+                DB::connection($request->get('divisi'))
+                    ->update('update users set password=? where email=?', [ bcrypt($password), trim($sql->email) ]);
             });
 
             return ApiResponse::responseSuccess('Password baru telah terkirim ke alamat email anda');
@@ -170,18 +189,20 @@ class AuthController extends Controller {
     protected function renewLogin(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'password' => 'required|string'
+                'password' => 'required|string',
+                'divisi'   => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Inputkan password anda');
+                return ApiResponse::responseWarning('Data divisi dan password tidak boleh kosong');
             }
 
             $token = $request->header('Authorization');
             $formatToken = explode(" ", $token);
             $old_token = trim($formatToken[1]);
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('user_api_sessions')->lock('with (nolock)')
                     ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
                                 isnull(users.user_id, '') as user_id,
                                 isnull(users.password, '') as password")
@@ -199,8 +220,9 @@ class AuthController extends Controller {
             $date_expired = date('Y-m-d H:i:s', strtotime('+1 day'));
             $time_expired = time() + 24 * 60 * 60;
 
-            DB::transaction(function () use ($date_expired, $time_expired, $old_token) {
-                DB::update('update  user_api_tokens
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $date_expired, $time_expired, $old_token) {
+                DB::connection($request->get('divisi'))
+                    ->update('update  user_api_tokens
                             set     date_expired=?, expired_at=?
                             where   token=?', [ $date_expired, $time_expired, $old_token ]);
             });
@@ -219,11 +241,20 @@ class AuthController extends Controller {
 
     protected function profile(Request $request) {
         try {
+            $validate = Validator::make($request->all(), [
+                'divisi'   => 'required|string',
+            ]);
+
+            if($validate->fails()){
+                return ApiResponse::responseWarning('Data divisi tidak boleh kosong');
+            }
+
             $token = $request->header('Authorization');
             $formatToken = explode(" ", $token);
             $session_id = trim($formatToken[1]);
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                        ->table('user_api_sessions')->lock('with (nolock)')
                         ->selectRaw("isnull(users.id, 0) as id, isnull(users.role_id, '') as id_role,
                                     isnull(users.name, '') as name, isnull(users.jabatan, '') as job,
                                     isnull(users.photo, '') as photo, isnull(users.telepon, '') as phone_number,
@@ -250,18 +281,20 @@ class AuthController extends Controller {
         try {
             $validate = Validator::make($request->all(), [
                 'password'      => 'required|string',
-                'new_password'  => 'required|string'
+                'new_password'  => 'required|string',
+                'divisi'        => 'required|string'
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Isi password lama anda terlebih dahulu');
+                return ApiResponse::responseWarning('Data divisi, password lama, dan password baru tidak boleh kosong');
             }
 
             $token = $request->header('Authorization');
             $formatToken = explode(" ", $token);
             $access_token = trim($formatToken[1]);
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('user_api_sessions')->lock('with (nolock)')
                     ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
                                 isnull(users.user_id, '') as user_id,
                                 isnull(users.password, '') as password")
@@ -280,8 +313,9 @@ class AuthController extends Controller {
             if ($status_password == false) {
                 return ApiResponse::responseWarning('Password lama anda salah');
             } else {
-                DB::transaction(function () use ($request, $sql) {
-                    DB::update('update  users
+                DB::connection($request->get('divisi'))->transaction(function () use ($request, $sql) {
+                    DB::connection($request->get('divisi'))
+                        ->update('update  users
                                 set     password=?
                                 where   user_id=?', [ bcrypt($request->get('new_password')), strtoupper(trim($sql->user_id)) ]);
                 });
@@ -295,13 +329,21 @@ class AuthController extends Controller {
 
     protected function logout(Request $request) {
         try {
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required|string'
+            ]);
+
+            if ($validate->fails()) {
+                return ApiResponse::responseWarning('Data divisi tidak boleh kosong');
+            }
+
             $token = $request->header('Authorization');
             $formatToken = explode(" ", $token);
             $access_token = trim($formatToken[1]);
 
-            DB::transaction(function () use ($access_token) {
-                DB::table('user_api_tokens')->where('token', $access_token)->delete();
-                DB::table('user_api_sessions')->where('session_id', $access_token)->delete();
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $access_token) {
+                DB::connection($request->get('divisi'))->table('user_api_tokens')->where('token', $access_token)->delete();
+                DB::connection($request->get('divisi'))->table('user_api_sessions')->where('session_id', $access_token)->delete();
             });
             return ApiResponse::responseSuccess('Anda berhasil logout');
         } catch (\Exception $exception) {

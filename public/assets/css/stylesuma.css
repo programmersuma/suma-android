@@ -1,0 +1,29 @@
+.descriptionpart {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.imgpartframe {
+    height: 200px;      /* Equals maximum image height */
+    width: auto;
+    border: 0px solid red;
+    white-space: nowrap; /* This is required unless you put the helper span closely near the img */
+
+    text-align: center;
+}
+
+.imgparthelper {
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+}
+
+
+img {
+    vertical-align: middle;
+    /* max-height: 200px; */
+    max-width: 200px;
+}

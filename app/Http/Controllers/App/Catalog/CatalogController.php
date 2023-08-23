@@ -13,8 +13,10 @@ class CatalogController extends Controller {
         try {
             $url = 'catalog/catalog';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
-            $body = [];
-            $response = ApiRequest::requestGet($url, $header, $body);
+            $body = [
+                'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
         } catch (\Exception $exception) {

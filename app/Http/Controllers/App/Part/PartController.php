@@ -15,7 +15,8 @@ class PartController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'page'      => $request->get('page'),
-                'search'    => $request->get('search')
+                'search'    => $request->get('search'),
+                'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -32,6 +33,7 @@ class PartController extends Controller {
             $body = [
                 'page'      => $request->get('page'),
                 'search'    => $request->get('search'),
+                'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -52,7 +54,8 @@ class PartController extends Controller {
                 'part_description'  => $request->get('part_description'),
                 'item_group'        => $request->get('item_group'),
                 'motor_type'        => $request->get('motor_type'),
-                'sorting'           => $request->get('sorting')
+                'sorting'           => $request->get('sorting'),
+                'divisi'            => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -67,7 +70,8 @@ class PartController extends Controller {
             $url = 'part/part-favorite';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'ms_dealer_id'  => $request->get('ms_dealer_id')
+                'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -85,6 +89,7 @@ class PartController extends Controller {
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'id_part'       => $request->get('id_part'),
                 'is_love'       => $request->get('is_love'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -103,6 +108,7 @@ class PartController extends Controller {
                 'salesman'      => $request->get('salesman'),
                 'dealer'        => $request->get('dealer'),
                 'part_number'   => $request->get('is_love'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -123,7 +129,8 @@ class PartController extends Controller {
                 'part_description'  => $request->get('part_description'),
                 'item_group'        => $request->get('item_group'),
                 'motor_type'        => $request->get('motor_type'),
-                'sorting'           => $request->get('sorting')
+                'sorting'           => $request->get('sorting'),
+                'divisi'            => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -139,7 +146,8 @@ class PartController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
-                'id_part_cart'  => $request->get('id_part_cart')
+                'id_part_cart'  => $request->get('id_part_cart'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

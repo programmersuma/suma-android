@@ -15,27 +15,13 @@ class VisitController extends Controller
 {
     public function checkCheckInDashboard(Request $request) {
         try {
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required'
+            ]);
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
+            if($validate->fails()) {
+                return ApiResponse::responseWarning('Pilih data divisi terlebih dahulu');
             }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
 
             $sql = "select  top 1 isnull(rtrim(visit.kd_visit), '') as code_visit,
                             isnull(visit.distance, 0) as distance,
@@ -59,7 +45,7 @@ class VisitController extends Controller
                                     visit_date.companyid=dealer.companyid
                 order by visit.check_in asc";
 
-            $result = DB::select($sql, [ strtoupper(trim($user_id)), strtoupper(trim($companyid)) ]);
+            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->userlogin->companyid)) ]);
             $data_checkIn = new Collection();
             $jumlah_data = 0;
 
@@ -89,39 +75,19 @@ class VisitController extends Controller
     public function dateVisit(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'ms_dealer_id' => 'required'
+                'ms_dealer_id'  => 'required',
+                'divisi'        => 'required'
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih data dealer terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih data divisi dan dealer terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(kd_dealer, '') as kode_dealer")
                     ->where('id', $request->get('ms_dealer_id'))
-                    ->where('companyid', $companyid)
+                    ->where('companyid', $request->userlogin->companyid)
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -130,13 +96,14 @@ class VisitController extends Controller
 
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = DB::table('visit_date')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('visit_date')->lock('with (nolock)')
                     ->selectRaw("isnull(visit_date.kd_visit, '') as id,
                                 isnull(visit_date.tanggal, '') as date,
                                 isnull(visit_date.created_at, '') as created_at,
                                 isnull(visit_date.updated_at, '') as updated_at")
-                    ->where('visit_date.companyid', strtoupper(trim($companyid)))
-                    ->where('visit_date.kd_sales', strtoupper(trim($user_id)))
+                    ->where('visit_date.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('visit_date.kd_sales', strtoupper(trim($request->userlogin->user_id)))
                     ->where('visit_date.kd_dealer', strtoupper(trim($kode_dealer)))
                     ->whereRaw("isnull(visit_date.checkin, 0)=0 and
                                 visit_date.tanggal >= convert(date, dateadd(month, -1, getdate()), 111)")
@@ -169,35 +136,15 @@ class VisitController extends Controller
                 'latitude'      => 'required',
                 'longitude'     => 'required',
                 'ms_dealer_id'  => 'required',
+                'divisi'        => 'required',
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('ms_dealer_id, date, latitude, longitude required');
+                return ApiResponse::responseWarning('Isi data divisi, ms_dealer_id, date, latitude, dan longitude');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer,
                                 isnull(dealer.latitude, '') as latitude,
                                 isnull(dealer.longitude, '') as longitude,
@@ -214,7 +161,7 @@ class VisitController extends Controller
                             ->on('dealer.companyid', '=', 'msdealer.companyid');
                         })
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('dealer.companyid', strtoupper(trim($companyid)))
+                    ->where('dealer.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '' ) {
@@ -223,23 +170,25 @@ class VisitController extends Controller
 
             $distance = (double)$sql->distance;
 
-            $kode_visit = 'VS'.strtoupper(trim($companyid)).date('ymd', strtotime($request->get('date'))).
-                            strtoupper(trim($user_id)).strtoupper(trim($sql->kode_dealer));
+            $kode_visit = 'VS'.strtoupper(trim($request->userlogin->companyid)).date('ymd', strtotime($request->get('date'))).
+                            strtoupper(trim($request->userlogin->user_id)).strtoupper(trim($sql->kode_dealer));
 
-            DB::transaction(function () use ($request, $sql, $kode_visit, $user_id, $distance, $companyid) {
-                DB::insert('exec SP_VisitTmp_Simpan_new ?,?,?,?,?,?,?,?,?', [
-                    strtoupper(trim($kode_visit)), strtoupper(trim($user_id)), strtoupper(trim(trim($sql->kode_dealer))),
-                    trim($request->get('latitude')), trim($request->get('longitude')), (double)$distance,
-                    strtoupper(trim($request->get('keterangan'))), strtoupper(trim($companyid)),
-                    strtoupper(trim($user_id))
-                ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $sql, $kode_visit, $distance) {
+                DB::connection($request->get('divisi'))
+                    ->insert('exec SP_VisitTmp_Simpan_new ?,?,?,?,?,?,?,?,?', [
+                        strtoupper(trim($kode_visit)), strtoupper(trim($request->userlogin->user_id)), strtoupper(trim(trim($sql->kode_dealer))),
+                        trim($request->get('latitude')), trim($request->get('longitude')), (double)$distance,
+                        strtoupper(trim($request->get('keterangan'))), strtoupper(trim($request->userlogin->companyid)),
+                        strtoupper(trim($request->userlogin->user_id))
+                    ]);
             });
 
-            $sql = DB::table('visittmp')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('visittmp')->lock('with (nolock)')
                     ->selectRaw("isnull(visittmp.kd_visit, '') as code_visit,
                                 isnull(visittmp.distance, 0) as distance")
                     ->where('visittmp.kd_visit', strtoupper(trim($kode_visit)))
-                    ->where('visittmp.companyid', strtoupper(trim($companyid)))
+                    ->where('visittmp.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->code_visit)) {
@@ -272,34 +221,15 @@ class VisitController extends Controller
                 'code_visit'    => 'required',
                 'latitude'      => 'required',
                 'longitude'     => 'required',
+                'divisi'        => 'required'
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Code visit required');
+                return ApiResponse::responseWarning('Isi data divisi, kode visit, latitude, dan longitude');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('visittmp')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('visittmp')->lock('with (nolock)')
                     ->selectRaw("isnull(visittmp.kd_visit, '') as code_visit,
                                 isnull(visittmp.kd_sales, 0) as salesman,
                                 cast((6371 *
@@ -315,7 +245,7 @@ class VisitController extends Controller
                             ->on('dealer.companyid', '=', 'visittmp.companyid');
                     })
                     ->where('visittmp.kd_visit', strtoupper(trim($request->get('code_visit'))))
-                    ->where('visittmp.companyid', strtoupper(trim($companyid)))
+                    ->where('visittmp.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if (empty($sql->code_visit) || trim($sql->code_visit) == '') {
@@ -334,9 +264,10 @@ class VisitController extends Controller
             $kode_sales = strtoupper(trim($sql->salesman));
             $distance = (double)$sql->distance;
 
-            $sql = DB::table('visit')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('visit')->lock('with (nolock)')
                     ->selectRaw("isnull(visit.kd_visit, '') as code_visit")
-                    ->where('visit.companyid', strtoupper(trim($companyid)))
+                    ->where('visit.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->where('visit.kd_sales', strtoupper(trim($kode_sales)))
                     ->whereRaw("visit.check_out is null")
                     ->orderBy('visit.check_in', 'asc')
@@ -346,11 +277,13 @@ class VisitController extends Controller
                 return ApiResponse::responseWarning('Anda belum di check out di toko sebelumnya. Lakukan proses check out terlebih dahulu');
             }
 
-            DB::transaction(function () use ($request, $distance, $companyid) {
-                DB::insert("exec SP_Visit_Simpan1 ?,?,?,?,?", [
-                    strtoupper(trim($request->get('code_visit'))), $request->get('latitude'),
-                    $request->get('longitude'), $distance, strtoupper(trim($companyid))
-                ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $distance) {
+                DB::connection($request->get('divisi'))
+                    ->insert("exec SP_Visit_Simpan1 ?,?,?,?,?", [
+                        strtoupper(trim($request->get('code_visit'))), $request->get('latitude'),
+                        $request->get('longitude'), $distance,
+                        strtoupper(trim($request->userlogin->companyid))
+                    ]);
             });
 
             return ApiResponse::responseSuccess('Anda Berhasil Check-In', strtoupper(trim($request->get('code_visit'))));
@@ -363,40 +296,21 @@ class VisitController extends Controller
     public function checkOut(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'code_visit' => 'required|string'
+                'code_visit'    => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Code visit required');
+                return ApiResponse::responseWarning('Pilih data divisi dan kode visit terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            DB::transaction(function () use ($request, $companyid) {
-                DB::insert('exec SP_Visit_CheckOut ?,?,?', [
-                    strtoupper(trim($request->get('code_visit'))),
-                    strtoupper(trim($request->get('keterangan'))),
-                    strtoupper(trim($companyid))
-                ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))
+                    ->insert('exec SP_Visit_CheckOut ?,?,?', [
+                        strtoupper(trim($request->get('code_visit'))),
+                        strtoupper(trim($request->get('keterangan'))),
+                        strtoupper(trim($request->userlogin->companyid))
+                    ]);
             });
 
             return ApiResponse::responseSuccess('Anda Berhasil Check-Out', $request->all());
@@ -409,46 +323,24 @@ class VisitController extends Controller
     public function listPlanningVisit(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'tanggal'   => 'required|string'
+                'tanggal'   => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Kolom tanggal harus terisi');
+                return ApiResponse::responseWarning('Pilih data visit dan kolom tanggal harus terisi');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $role_id = strtoupper(trim($sql->role_id));
-            $companyid = strtoupper(trim($sql->companyid));
             $salesman = '';
-
             /* ==================================================================== */
             /* Cek Role Id Supervisor */
             /* ==================================================================== */
-            if(strtoupper(trim($role_id)) == 'MD_H3_KORSM') {
-                $sql = DB::table('superspv')->lock('with (nolock)')
+            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+                $sql = DB::connection($request->get('divisi'))
+                        ->table('superspv')->lock('with (nolock)')
                         ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($user_id)))
-                        ->where('superspv.companyid', strtoupper(trim($companyid)))
+                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
+                        ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
                         ->first();
 
                 if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
@@ -457,9 +349,10 @@ class VisitController extends Controller
 
                 $kode_supervisor = strtoupper(trim($sql->kode_supervisor));
 
-                $sql = DB::table('salesman')->lock('with (nolock)')
+                $sql = DB::connection($request->get('divisi'))
+                        ->table('salesman')->lock('with (nolock)')
                         ->selectRaw("isnull(salesman.kd_sales, '') as kode_sales")
-                        ->where('salesman.companyid', strtoupper(trim($companyid)))
+                        ->where('salesman.companyid', strtoupper(trim($request->userlogin->companyid)))
                         ->where('salesman.spv', $kode_supervisor)
                         ->get();
 
@@ -494,9 +387,9 @@ class VisitController extends Controller
                         where	visit_date.companyid=? and
                                 visit_date.tanggal=?";
 
-            if(strtoupper(trim($role_id)) == 'MD_H3_SM') {
-                $sql .= " and visit_date.kd_sales='".strtoupper(trim($user_id))."'";
-            } elseif(strtoupper(trim($role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_SM') {
+                $sql .= " and visit_date.kd_sales='".strtoupper(trim($request->userlogin->user_id))."'";
+            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
                 $sql .= " and visit_date.kd_sales in (".strtoupper(trim($salesman)).")";
             }
 
@@ -517,7 +410,7 @@ class VisitController extends Controller
                                         visit_date.companyid=dealer.companyid
                     order by visit_date.tanggal asc, visit.check_in asc, visit.check_out asc";
 
-            $result = DB::select($sql, [ strtoupper(trim($companyid)), $request->get('tanggal') ]);
+            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin->companyid)), $request->get('tanggal') ]);
 
             return ApiResponse::responseSuccess('success', $result);
         } catch (\Exception $exception) {
@@ -532,52 +425,33 @@ class VisitController extends Controller
                 'tanggal'       => 'required|string',
                 'salesman'      => 'required|string',
                 'dealer'        => 'required|string',
-                'keterangan'    => 'required|string'
+                'keterangan'    => 'required|string',
+                'divisi'        => 'required|string'
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Isi data planning visit secara lengkap');
+                return ApiResponse::responseWarning('Isi data divisi dan data planning visit secara lengkap');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('salesk_dtl')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('salesk_dtl')->lock('with (nolock)')
                     ->selectRaw("isnull(salesk_dtl.kd_sales, '') as kode_sales")
                     ->where('salesk_dtl.kd_sales', strtoupper(trim($request->get('salesman'))))
                     ->where('salesk_dtl.kd_dealer', strtoupper(trim($request->get('dealer'))))
-                    ->where('salesk_dtl.companyid', strtoupper(trim($companyid)))
+                    ->where('salesk_dtl.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->kode_sales) || trim($sql->kode_sales) == '') {
                 return ApiResponse::responseWarning('Data salesman '.strtoupper(trim($request->get('salesman'))).' tidak terdaftar di dealer '.strtoupper(trim($request->get('dealer'))));
             }
 
-            DB::transaction(function () use ($request, $companyid) {
-                DB::insert('exec SP_PlanVisitSales_Simpan ?,?,?,?,?', [
-                    trim($request->get('tanggal')), strtoupper(trim($request->get('dealer'))),
-                    strtoupper(trim($request->get('salesman'))), strtoupper(trim($request->get('keterangan'))),
-                    strtoupper(trim($companyid))
-                ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))
+                    ->insert('exec SP_PlanVisitSales_Simpan ?,?,?,?,?', [
+                        trim($request->get('tanggal')), strtoupper(trim($request->get('dealer'))),
+                        strtoupper(trim($request->get('salesman'))), strtoupper(trim($request->get('keterangan'))),
+                        strtoupper(trim($request->userlogin->companyid))
+                    ]);
             });
 
             return ApiResponse::responseSuccess('Data Berhasil Disimpan', $request->all());
@@ -590,50 +464,31 @@ class VisitController extends Controller
     public function deletePlanningVisit(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'visit_code' => 'required|string'
+                'visit_code'    => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if ($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih data visit salesman terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih data divisi dan visit salesman terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('visit')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('visit')->lock('with (nolock)')
                     ->selectRaw("isnull(visit.kd_visit, '') as code_visit")
                     ->where('visit.kd_visit', strtoupper(trim(trim($request->get('visit_code')))))
-                    ->where('visit.companyid', strtoupper(trim(trim($companyid))))
+                    ->where('visit.companyid', strtoupper(trim(trim($request->userlogin->companyid))))
                     ->first();
 
             if (!empty($sql->code_visit)) {
                 return ApiResponse::responseWarning('Planning visit yang telah di kunjungi salesman tidak dapat dihapus');
             }
 
-            DB::transaction(function () use ($request, $companyid) {
-                DB::delete("exec SP_PlanVisitSales_Hapus ?,?", [
-                    strtoupper(trim($request->get('visit_code'))),
-                    strtoupper(trim($companyid))
-                ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))
+                    ->delete("exec SP_PlanVisitSales_Hapus ?,?", [
+                        strtoupper(trim($request->get('visit_code'))),
+                        strtoupper(trim($request->userlogin->companyid))
+                    ]);
             });
 
             return ApiResponse::responseSuccess('Data Berhasil Dihapus', null);

@@ -16,8 +16,9 @@ class DealerController extends Controller {
             $body = [
                 'page'      => $request->get('page'),
                 'search'    => $request->get('search'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
-            $response = ApiRequest::requestGet($url, $header, $body);
+            $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
         } catch (\Exception $exception) {
@@ -31,8 +32,9 @@ class DealerController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'page'      => $request->get('page'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
-            $response = ApiRequest::requestGet($url, $header, $body);
+            $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
         } catch (\Exception $exception) {
@@ -54,6 +56,7 @@ class DealerController extends Controller {
                 'end_effdate'               => $request->get('end_effdate'),
                 'photo'                     => $request->get('photo'),
                 'description'               => $request->get('description'),
+                'divisi'                    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -74,6 +77,7 @@ class DealerController extends Controller {
                 'photo'         => $request->get('photo'),
                 'phone'         => $request->get('phone'),
                 'description'   => $request->get('description'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -89,7 +93,8 @@ class DealerController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'kode_dealer'   => $request->get('kode_dealer'),
-                'latlong'       => $request->get('latlong')
+                'latlong'       => $request->get('latlong'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -104,7 +109,8 @@ class DealerController extends Controller {
             $url = 'dealer/list-kredit-limit';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'ms_dealer_id'  => $request->get('ms_dealer_id')
+                'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -119,7 +125,8 @@ class DealerController extends Controller {
             $url = 'dealer/list-jatuh-tempo';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'ms_dealer_id'  => $request->get('ms_dealer_id')
+                'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -134,7 +141,8 @@ class DealerController extends Controller {
             $url = 'dealer/detail-jatuh-tempo';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_faktur'  => $request->get('nomor_faktur')
+                'nomor_faktur'  => $request->get('nomor_faktur'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

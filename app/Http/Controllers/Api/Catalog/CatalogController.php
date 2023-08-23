@@ -8,12 +8,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Validator;
 
 class CatalogController extends Controller {
 
     protected function listCatalog(Request $request) {
         try {
-            $sql = DB::table('catalog_part')->lock('with (nolock)')
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required|string',
+            ]);
+
+            if ($validate->fails()) {
+                return ApiResponse::responseWarning('Data divisi tidak boleh kosong');
+            }
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('catalog_part')->lock('with (nolock)')
                     ->selectRaw("isnull(id, 0) as id, isnull(name, '') as name,
                                 isnull(icon, '') as icon, isnull(detail, '') as detail")
                     ->orderBy('id', 'asc')
@@ -30,7 +40,8 @@ class CatalogController extends Controller {
                 ]);
             }
 
-            $sql = DB::table('catalog')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('catalog')->lock('with (nolock)')
                     ->selectRaw("isnull(catalog.id, 0) as id_catalog, isnull(catalog.name, '') as name_catalog,
                                 isnull(catalog.icon, '') as icon_catalog, isnull(catalog.list, 0) as list_catalog,
                                 isnull(catalog_dtl.id_detail, 0) as id_detail, isnull(catalog_dtl.name, '') as name_detail,

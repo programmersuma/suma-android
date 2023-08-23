@@ -6,13 +6,14 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Catalog\CatalogController;
 use App\Http\Controllers\Api\Dashboard\DashboardController;
+use App\Http\Controllers\Api\Dashboard\NotificationController;
 use App\Http\Controllers\Api\Dealer\DealerController;
 use App\Http\Controllers\Api\Part\CartController;
 use App\Http\Controllers\Api\Part\PartController;
 use App\Http\Controllers\Api\Part\PofController;
 use App\Http\Controllers\Api\Part\SuggestionController;
 use App\Http\Controllers\Api\Promo\PromoController;
-use App\Http\Controllers\Api\Sales\EfectivitasController;
+use App\Http\Controllers\Api\Sales\RealisasiVisitController;
 use App\Http\Controllers\Api\Sales\SalesmanController;
 use App\Http\Controllers\Api\Sales\VisitController;
 use App\Http\Controllers\Api\Tracking\TrackingController;
@@ -34,10 +35,6 @@ Route::group(['middleware' => 'authBasic'], function() {
     });
 });
 
-// Route::post('dashboard/push-notification', 'Dashboard\PushNotificationController@PushNotification');
-//
-// ;
-
 Route::group(['middleware' => 'checkToken'], function() {
     Route::controller(AuthController::class)->group(function () {
         Route::post('auth/login', 'login');
@@ -50,12 +47,16 @@ Route::group(['middleware' => 'checkToken'], function() {
 
     Route::controller(DashboardController::class)->group(function () {
         Route::post('dashboard/index', 'index');
-        Route::post('dashboard/notice', 'Notice');
+    });
 
+    Route::controller(NotificationController::class)->group(function () {
+        Route::post('notification/count', 'countNotification');
+        Route::post('notification/list', 'listNotification');
+        Route::post('notification/push', 'pushNotification');
     });
 
     Route::controller(CatalogController::class)->group(function () {
-        Route::get('catalog/catalog', 'listCatalog');
+        Route::post('catalog/catalog', 'listCatalog');
     });
 
     Route::controller(CartController::class)->group(function () {
@@ -73,8 +74,8 @@ Route::group(['middleware' => 'checkToken'], function() {
     });
 
     Route::controller(DealerController::class)->group(function () {
-        Route::get('dealer/list-dealer', 'listDealer');
-        Route::get('dealer/list-competitor', 'listCompetitor');
+        Route::post('dealer/list-dealer', 'listDealer');
+        Route::post('dealer/list-competitor', 'listCompetitor');
         Route::post('dealer/add-competitor', 'addCompetitor');
         Route::post('dealer/add-new-dealer', 'addNewDealer');
         Route::post('dealer/update-dealer', 'updateDealerLocation');
@@ -97,25 +98,15 @@ Route::group(['middleware' => 'checkToken'], function() {
     });
 
     Route::controller(SalesmanController::class)->group(function () {
-        Route::get('sales/list-salesman', 'listSalesman');
-        Route::get('sales/list-selected-salesman', 'listSelectedSalesman');
-        Route::get('sales/list-koordinator', 'listKoordinator');
+        Route::post('sales/list-salesman', 'listSalesman');
+        Route::post('sales/list-selected-salesman', 'listSelectedSalesman');
+        Route::post('sales/list-koordinator', 'listKoordinator');
 
     });
 
     Route::controller(SuggestionController::class)->group(function () {
         Route::post('suggest/order-suggest', 'listSuggestOrder');
         Route::post('suggest/use-suggestion', 'useSuggestion');
-    });
-
-    Route::controller(EfectivitasController::class)->group(function () {
-        Route::post('sales/efectivitas-salesman', 'efectivitasSalesman');
-        Route::post('sales/efectivitas-coordinator', 'efectivitasKoordinator');
-        Route::post('sales/efectivitas-manager', 'efectivitasManager');
-
-        Route::post('sales/realisasi-visit-salesman', 'efectivitasSalesman');
-        Route::post('sales/realisasi-visit-coordinator', 'efectivitasKoordinator');
-        Route::post('sales/realisasi-visit-manager', 'efectivitasManager');
     });
 
     Route::controller(PofController::class)->group(function () {
@@ -136,8 +127,9 @@ Route::group(['middleware' => 'checkToken'], function() {
     });
 
     Route::controller(PromoController::class)->group(function () {
-        Route::get('promo/brosure-promo', 'listBrosur');
-        Route::get('promo/part-promo', 'listPromoPart');
+        Route::post('promo/brosure-promo', 'listBrosur');
+        Route::post('promo/brosure-promo/detail', 'listBrosurDetail');
+        Route::post('promo/part-promo', 'listPromoPart');
     });
 
     Route::controller(TrackingController::class)->group(function () {
@@ -156,44 +148,12 @@ Route::group(['middleware' => 'checkToken'], function() {
         Route::post('visit/delete-date-visit', 'deletePlanningVisit');
     });
 
-
-//     Route::group(['middleware' => 'checkLogin'], function() {
-//
-//
-//
-
-
-
-
-
-//         Route::post('sales/realisasi-visit-salesman', 'Sales\RealisasiVisitController@RealisasiVisitSalesman');
-//         Route::post('sales/realisasi-visit-coordinator', 'Sales\RealisasiVisitController@RealisasiVisitCoordinator');
-//         Route::post('sales/realisasi-visit-manager', 'Sales\RealisasiVisitController@RealisasiVisitManager');
-
-//         Route::post('sales/', 'Sales\EfectivitasController@EfectivitasSalesman');
-//         Route::post('sales/efectivitas-coordinator', 'Sales\EfectivitasController@EfectivitasKoordinator');
-//         Route::post('sales/efectivitas-manager', 'Sales\EfectivitasController@EfectivitasManager');
-
-
-
-
-
-//
-
-
-
-
-
-
-
-
-//
-
-
-
-
-
-    // });
+    Route::controller(RealisasiVisitController::class)->group(function () {
+        Route::post('visit/realisasi-visit-detail', 'realisasiVisitDetail');
+        Route::post('visit/realisasi-visit-salesman', 'realisasiVisitSalesman');
+        Route::post('visit/realisasi-visit-coordinator', 'realisasiVisitKoordinator');
+        Route::post('visit/realisasi-visit-manager', 'realisasiVisitManager');
+    });
 });
 
 

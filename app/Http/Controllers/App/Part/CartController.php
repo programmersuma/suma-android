@@ -15,7 +15,8 @@ class CartController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
-                'item_part'     => $request->get('item_part')
+                'item_part'     => $request->get('item_part'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -32,7 +33,8 @@ class CartController extends Controller {
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'id_part'       => $request->get('id_part'),
-                'quantity'      => $request->get('quantity')
+                'quantity'      => $request->get('quantity'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -47,7 +49,8 @@ class CartController extends Controller {
             $url = 'cart/list-cart';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'ms_dealer_id'  => $request->get('ms_dealer_id')
+                'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -63,7 +66,8 @@ class CartController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
-                'tpc'           => $request->get('tpc')
+                'tpc'           => $request->get('tpc'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -80,7 +84,8 @@ class CartController extends Controller {
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'id_part_cart'  => $request->get('id_part_cart'),
-                'quantity'      => $request->get('quantity')
+                'quantity'      => $request->get('quantity'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -97,7 +102,8 @@ class CartController extends Controller {
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'id_part_cart'  => $request->get('id_part_cart'),
-                'harga'         => $request->get('harga')
+                'harga'         => $request->get('harga'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -114,7 +120,8 @@ class CartController extends Controller {
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'id_part_cart'  => $request->get('id_part_cart'),
-                'discount'      => $request->get('discount')
+                'discount'      => $request->get('discount'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -131,7 +138,8 @@ class CartController extends Controller {
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'id_part_cart'  => $request->get('id_part_cart'),
-                'discount'      => $request->get('discount')
+                'discount'      => $request->get('discount'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -147,7 +155,8 @@ class CartController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
-                'id_part_cart'  => $request->get('id_part_cart')
+                'id_part_cart'  => $request->get('id_part_cart'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -165,7 +174,8 @@ class CartController extends Controller {
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'bo'            => $request->get('bo'),
                 'umur_faktur'   => $request->get('umur_faktur'),
-                'keterangan'    => $request->get('keterangan')
+                'keterangan'    => $request->get('keterangan'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

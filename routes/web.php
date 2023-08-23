@@ -4,16 +4,17 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\App\Auth\AuthController;
 use App\Http\Controllers\App\Catalog\CatalogController;
 use App\Http\Controllers\App\Dashboard\DashboardController;
+use App\Http\Controllers\App\Dashboard\NotificationController;
 use App\Http\Controllers\App\Dealer\DealerController;
 use App\Http\Controllers\App\Part\CartController;
 use App\Http\Controllers\App\Part\PartController;
 use App\Http\Controllers\App\Part\PofController;
 use App\Http\Controllers\App\Part\SuggestionController;
 use App\Http\Controllers\App\Promo\PromoController;
-use App\Http\Controllers\App\Sales\EfectivitasController;
 use App\Http\Controllers\App\Sales\SalesmanController;
 use App\Http\Controllers\App\Sales\VisitController;
 use App\Http\Controllers\App\Tracking\TrackingController;
+use App\Http\Controllers\App\Sales\RealisasiVisitController;
 
 /*
 |--------------------------------------------------------------------------
@@ -42,12 +43,16 @@ Route::controller(AuthController::class)->group(function () {
 
 Route::controller(DashboardController::class)->group(function () {
     Route::post('dashboard/index', 'index');
-    Route::post('dashboard/notice', 'Notice');
+});
 
+Route::controller(NotificationController::class)->group(function () {
+    Route::post('notification/count', 'countNotification');
+    Route::post('notification/list', 'listNotification');
+    Route::post('notification/push', 'pushNotification');
 });
 
 Route::controller(CatalogController::class)->group(function () {
-    Route::get('catalog/catalog', 'listCatalog');
+    Route::post('catalog/catalog', 'listCatalog');
 });
 
 Route::controller(CartController::class)->group(function () {
@@ -65,8 +70,8 @@ Route::controller(CartController::class)->group(function () {
 });
 
 Route::controller(DealerController::class)->group(function () {
-    Route::get('dealer/list-dealer', 'listDealer');
-    Route::get('dealer/list-competitor', 'listCompetitor');
+    Route::post('dealer/list-dealer', 'listDealer');
+    Route::post('dealer/list-competitor', 'listCompetitor');
     Route::post('dealer/add-competitor', 'addCompetitor');
     Route::post('dealer/add-new-dealer', 'addNewDealer');
     Route::post('dealer/update-dealer', 'updateDealerLocation');
@@ -89,25 +94,15 @@ Route::controller(PartController::class)->group(function () {
 });
 
 Route::controller(SalesmanController::class)->group(function () {
-    Route::get('sales/list-salesman', 'listSalesman');
-    Route::get('sales/list-selected-salesman', 'listSelectedSalesman');
-    Route::get('sales/list-koordinator', 'listKoordinator');
+    Route::post('sales/list-salesman', 'listSalesman');
+    Route::post('sales/list-selected-salesman', 'listSelectedSalesman');
+    Route::post('sales/list-koordinator', 'listKoordinator');
 
 });
 
 Route::controller(SuggestionController::class)->group(function () {
     Route::post('suggest/order-suggest', 'listSuggestOrder');
     Route::post('suggest/use-suggestion', 'useSuggestion');
-});
-
-Route::controller(EfectivitasController::class)->group(function () {
-    Route::post('sales/efectivitas-salesman', 'efectivitasSalesman');
-    Route::post('sales/efectivitas-coordinator', 'efectivitasKoordinator');
-    Route::post('sales/efectivitas-manager', 'efectivitasManager');
-
-    Route::post('sales/realisasi-visit-salesman', 'efectivitasSalesman');
-    Route::post('sales/realisasi-visit-coordinator', 'efectivitasKoordinator');
-    Route::post('sales/realisasi-visit-manager', 'efectivitasManager');
 });
 
 Route::controller(PofController::class)->group(function () {
@@ -128,13 +123,22 @@ Route::controller(PofController::class)->group(function () {
 });
 
 Route::controller(PromoController::class)->group(function () {
-    Route::get('promo/brosure-promo', 'listBrosur');
-    Route::get('promo/part-promo', 'listPromoPart');
+    Route::post('promo/brosure-promo', 'listBrosur');
+    Route::post('promo/brosure-promo/detail', 'listBrosurDetail');
+    Route::post('promo/part-promo', 'listPromoPart');
 });
 
 Route::controller(TrackingController::class)->group(function () {
     Route::post('tracking/tracking-order', 'trackingOrder');
     Route::post('tracking/detail-tracking', 'detailTracking');
+});
+
+
+Route::controller(RealisasiVisitController::class)->group(function () {
+    Route::post('visit/realisasi-visit-detail', 'realisasiVisitDetail');
+    Route::post('visit/realisasi-visit-salesman', 'realisasiVisitSalesman');
+    Route::post('visit/realisasi-visit-coordinator', 'realisasiVisitKoordinator');
+    Route::post('visit/realisasi-visit-manager', 'realisasiVisitManager');
 });
 
 Route::controller(VisitController::class)->group(function () {

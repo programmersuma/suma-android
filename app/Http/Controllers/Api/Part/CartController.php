@@ -16,11 +16,12 @@ class CartController extends Controller {
         try {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
-                'item_part'     => 'required'
+                'item_part'     => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Silahkan isi pilih data dealer dan part number terlebih dahulu');
+                return ApiResponse::responseWarning('Silahkan isi data divisi, data dealer, dan part number terlebih dahulu');
             }
 
             $data_item_part = json_decode(str_replace('\\', '', trim($request->get('item_part'))));
@@ -37,38 +38,20 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
                 'id_part'       => 'required',
-                'quantity'      => 'required'
+                'quantity'      => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Dealer Id dan part Id tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, dealer Id, dan part Id tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $role_id = strtoupper(trim($request->userlogin->role_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.role_id, '') as role_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $role_id = strtoupper(trim($sql->role_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -79,7 +62,8 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = DB::table('mspart')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('mspart')->lock('with (nolock)')
                     ->selectRaw("isnull(mspart.kd_part, '') as part_number")
                     ->where('mspart.id', $request->get('id_part'))
                     ->first();
@@ -89,11 +73,12 @@ class CartController extends Controller {
             }
             $part_number = strtoupper(trim($sql->part_number));
 
-            DB::transaction(function () use ($request, $kode_dealer, $part_number, $role_id, $user_id, $companyid) {
-                DB::insert("exec SP_CartDtlTmp_AddToCart ?,?,?,?,?,?", [
-                    strtoupper(trim($kode_dealer)), strtoupper(trim(trim($part_number))),
-                    (double)$request->get('quantity'), strtoupper(trim($role_id)),
-                    strtoupper(trim($user_id)), strtoupper(trim($companyid))
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number, $role_id, $user_id, $companyid) {
+                DB::connection($request->get('divisi'))
+                    ->insert("exec SP_CartDtlTmp_AddToCart ?,?,?,?,?,?", [
+                        strtoupper(trim($kode_dealer)), strtoupper(trim(trim($part_number))),
+                        (double)$request->get('quantity'), strtoupper(trim($role_id)),
+                        strtoupper(trim($user_id)), strtoupper(trim($companyid))
                 ]);
             });
 
@@ -108,42 +93,18 @@ class CartController extends Controller {
         try {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Dealer Id tidak boleh kosong');
+                return ApiResponse::responseWarning('Isi data divisi dan dealer Id tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.id, 0) as id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.role_id, '') as role_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id_int = (int)$sql->id;
-            $user_id = strtoupper(trim($sql->user_id));
-            $role_id = strtoupper(trim($sql->role_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -151,7 +112,7 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = "select	'".trim($user_id_int)."' as id, isnull(carttmp.no_order, '') as no_order,
+            $sql = "select	'".trim($request->userlogin->id)."' as id, isnull(carttmp.no_order, '') as no_order,
                             isnull(company.kd_file, '') as kode_file, isnull(company.ppn, 0) as ppn,
                             isnull(carttmp.total, 0) as total_price, isnull(carttmp.kd_tpc, '14') as tpc_code,
                             isnull(carttmp.status, '') as status, isnull(carttmp.disc2, 0) as discount,
@@ -195,8 +156,8 @@ class CartController extends Controller {
                                     carttmp.disc2, carttmp.total, carttmp.status,
                                     carttmp.month_delivery
                             from	carttmp with (nolock)
-                            where	carttmp.kd_key='".strtoupper(trim($user_id))."/".strtoupper(trim($kode_dealer))."' and
-                                    carttmp.companyid='".strtoupper(trim($companyid))."'
+                            where	carttmp.kd_key='".strtoupper(trim($request->userlogin->user_id))."/".strtoupper(trim($kode_dealer))."' and
+                                    carttmp.companyid='".strtoupper(trim($request->userlogin->companyid))."'
                         )	carttmp
                                 inner join company with (nolock) on carttmp.companyid=company.companyid
                                 inner join cart_dtltmp with (nolock) on carttmp.kd_key=cart_dtltmp.kd_key and
@@ -226,7 +187,7 @@ class CartController extends Controller {
                                         discp.cabang=iif(isnull(company.inisial, 0) = 1, 'RK', 'PC')
                     order by carttmp.kd_part asc";
 
-            $result = DB::select($sql);
+            $result = DB::connection($request->get('divisi'))->select($sql);
 
             $jumlah_data = 0;
             $data_detail_cart = [];
@@ -257,7 +218,7 @@ class CartController extends Controller {
                 if((double)$data->stock <= 0) {
                     $available_part = 'Not Available';
                 } else {
-                    if(strtoupper(trim($role_id)) == 'MD_H3_MGMT') {
+                    if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_MGMT') {
                         $available_part = 'Available';
                     } else {
                         $available_part = 'Available '.number_format($data->stock).' pcs';
@@ -269,7 +230,7 @@ class CartController extends Controller {
                 $notes_harga = '';
                 $notes_bo = '';
 
-                if(strtoupper(trim($role_id)) != 'D_H3') {
+                if(strtoupper(trim($request->userlogin->role_id)) != 'D_H3') {
                     if((double)$data->discount_produk > 0) {
                         if((double)$data->discount > (double)$data->discount_produk) {
                             $notes_diskon = '*) Disc Max Produk '.trim($data->item_group).' : '.number_format($data->discount_produk, 2).' %';
@@ -333,7 +294,7 @@ class CartController extends Controller {
                         'dealer_code'       => $dealer_code,
                         'dealer_name'       => $dealer_name,
                         'tpc_code'          => (int)$tpc_code,
-                        'users_id'          => (int)$user_id_int,
+                        'users_id'          => (int)$request->userlogin->id,
                         'total_price'       => $grand_total_price,
                         'sub_price'         => $total_sub_price,
                         'discount'          => $discount,
@@ -349,7 +310,7 @@ class CartController extends Controller {
                         'dealer_code'       => 0,
                         'dealer_name'       => "",
                         'tpc_code'          => 14,
-                        'users_id'          => (int)$user_id_int,
+                        'users_id'          => (int)$request->userlogin->id,
                         'total_price'       => 0,
                         'created_at'        => null,
                         'updated_at'        => null,
@@ -374,10 +335,11 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
                 'tpc'           => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih atau isi dealerId dan kode tpc terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih divisi, dealer Id, dan kode tpc terlebih dahulu');
             }
 
             if($request->get('tpc') != '14' ) {
@@ -386,30 +348,11 @@ class CartController extends Controller {
                 }
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.role_id, '') as role_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -421,7 +364,8 @@ class CartController extends Controller {
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
 
-            $sql = DB::table('carttmp')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('carttmp')->lock('with (nolock)')
                     ->selectRaw("isnull(carttmp.kd_tpc, '') as kode_tpc")
                     ->where('kd_dealer', strtoupper(trim($kode_dealer)))
                     ->where('user_id', strtoupper(trim($user_id)))
@@ -433,10 +377,11 @@ class CartController extends Controller {
             }
 
             if(trim($sql->kode_tpc) != trim($request->get('tpc'))) {
-                DB::transaction(function () use ($request, $kode_dealer, $user_id, $companyid) {
-                    DB::update("exec SP_CartTmp_UpdateTpc1 ?,?,?,?", [
-                        strtoupper(trim($kode_dealer)), trim($request->get('tpc')),
-                        strtoupper(trim($user_id)), strtoupper(trim($companyid))
+                DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $user_id, $companyid) {
+                    DB::connection($request->get('divisi'))
+                        ->update("exec SP_CartTmp_UpdateTpc1 ?,?,?,?", [
+                            strtoupper(trim($kode_dealer)), trim($request->get('tpc')),
+                            strtoupper(trim($user_id)), strtoupper(trim($companyid))
                     ]);
                 });
             }
@@ -457,40 +402,23 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
                 'id_part_cart'  => 'required',
-                'quantity'      => 'required'
+                'quantity'      => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih atau isi dealerId, partId, dan jumlah quantity terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih atau isi divisi, dealer Id, part Id, dan jumlah quantity terlebih dahulu');
             }
 
             if((double)$request->get('quantity') <= 0) {
                 return ApiResponse::responseWarning('Jumlah order harus lebih besar dari nol (0)');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -501,7 +429,8 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = DB::table('mspart')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('mspart')->lock('with (nolock)')
                     ->selectRaw("isnull(mspart.kd_part, '') as part_number")
                     ->where('mspart.id', $request->get('id_part_cart'))
                     ->first();
@@ -512,8 +441,8 @@ class CartController extends Controller {
             $part_number = strtoupper(trim($sql->part_number));
 
 
-            DB::transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
-                DB::insert("exec SP_CartDtlTmp_UpdateQty1 ?,?,?,?,?", [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
+                DB::connection($request->get('divisi'))->insert("exec SP_CartDtlTmp_UpdateQty1 ?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($part_number)),
                     (double)$request->get('quantity'), strtoupper(trim($user_id)),
                     strtoupper(trim(trim($companyid))),
@@ -532,36 +461,18 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
                 'id_part_cart'  => 'required',
-                'harga'         => 'required'
+                'harga'         => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih atau isi dealerId, partId, dan nominal harga terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih divisi, dealer Id, part Id, dan nominal harga terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -572,7 +483,7 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = DB::table('carttmp')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('carttmp')->lock('with (nolock)')
                     ->selectRaw("isnull(carttmp.kd_key, '') as kode_key,
                                 isnull(carttmp.kd_tpc, '') as kode_tpc")
                     ->where('carttmp.kd_key', strtoupper(trim($user_id)).'/'.strtoupper(trim($kode_dealer)))
@@ -602,7 +513,7 @@ class CartController extends Controller {
                             inner join part with (nolock) on mspart.kd_part=part.kd_part and
                                         part.companyid=?";
 
-            $result = DB::select($sql, [ $request->get('id_part_cart'), strtoupper(trim($companyid)),
+            $result = DB::connection($request->get('divisi'))->select($sql, [ $request->get('id_part_cart'), strtoupper(trim($companyid)),
                             strtoupper(trim($companyid)) ]);
             $jumlah_data = 0;
             $part_number = '';
@@ -635,8 +546,8 @@ class CartController extends Controller {
                 }
             }
 
-            DB::transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
-                DB::insert("exec SP_CartDtlTmp_UpdateHarga1 ?,?,?,?,?", [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
+                DB::connection($request->get('divisi'))->insert("exec SP_CartDtlTmp_UpdateHarga1 ?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($part_number)),
                     (double)$request->get('harga'), strtoupper(trim($user_id)),
                     strtoupper(trim($companyid)),
@@ -656,36 +567,18 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
                 'id_part_cart'  => 'required',
-                'discount'      => 'required'
+                'discount'      => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih atau isi dealerId, partId, dan prosentase discount terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih divisi, dealer Id, part Id, dan prosentase discount terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -696,7 +589,7 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = DB::table('carttmp')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('carttmp')->lock('with (nolock)')
                     ->selectRaw("isnull(carttmp.kd_key, '') as kode_key,
                                 isnull(carttmp.kd_tpc, '') as kode_tpc")
                     ->where('carttmp.kd_key', strtoupper(trim($user_id)).'/'.strtoupper(trim($kode_dealer)))
@@ -711,7 +604,7 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Kode TPC cart anda adalah TPC 20. Kode TPC 20 tidak boleh mengganti harga');
             }
 
-            $sql = DB::table('mspart')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('mspart')->lock('with (nolock)')
                     ->selectRaw("isnull(mspart.kd_part, '') as part_number")
                     ->where('mspart.id', $request->get('id_part_cart'))
                     ->first();
@@ -721,8 +614,8 @@ class CartController extends Controller {
             }
             $part_number = strtoupper(trim($sql->part_number));
 
-            DB::transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
-                DB::insert("exec SP_CartDtlTmp_UpdateDiscDetail1 ?,?,?,?,?", [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
+                DB::connection($request->get('divisi'))->insert("exec SP_CartDtlTmp_UpdateDiscDetail1 ?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($part_number)),
                     (float)$request->get('discount'), strtoupper(trim($user_id)),
                     strtoupper(trim($companyid))
@@ -740,36 +633,18 @@ class CartController extends Controller {
         try {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
-                'discount'      => 'required'
+                'discount'      => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih atau isi dealerId dan prosentase discount terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih divisi, dealer Id, dan prosentase discount terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -780,7 +655,7 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = DB::table('carttmp')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('carttmp')->lock('with (nolock)')
                     ->selectRaw("isnull(carttmp.kd_key, '') as kode_key,
                                 isnull(carttmp.kd_tpc, '') as kode_tpc")
                     ->where('carttmp.kd_key', strtoupper(trim($user_id)).'/'.strtoupper(trim($kode_dealer)))
@@ -795,8 +670,8 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Kode TPC cart anda adalah TPC 20. Kode TPC 20 tidak boleh mengganti harga');
             }
 
-            DB::transaction(function () use ($request, $kode_dealer, $user_id, $companyid) {
-                DB::update("exec SP_CartTmp_UpdateDiscount ?,?,?,?", [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $user_id, $companyid) {
+                DB::connection($request->get('divisi'))->update("exec SP_CartTmp_UpdateDiscount ?,?,?,?", [
                     strtoupper(trim($kode_dealer)), (float)$request->get('discount'),
                     strtoupper(trim($user_id)), strtoupper(trim($companyid))
                 ]);
@@ -814,35 +689,17 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id' => 'required',
                 'id_part_cart' => 'required',
+                'divisi'       => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih Dealer Id dan Part Id terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih divisi, dealer Id, dan Part Id terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('mspart')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('mspart')->lock('with (nolock)')
                     ->selectRaw("isnull(mspart.kd_part, '') as part_number")
                     ->where('mspart.id', $request->get('id_part_cart'))
                     ->first();
@@ -852,7 +709,7 @@ class CartController extends Controller {
             }
             $part_number = strtoupper(trim($sql->part_number));
 
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -863,8 +720,8 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            DB::transaction(function () use ($part_number, $kode_dealer, $user_id, $companyid) {
-                DB::delete("exec SP_CartDtlTmp_Del1 ?,?,?,?", [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $part_number, $kode_dealer, $user_id, $companyid) {
+                DB::connection($request->get('divisi'))->delete("exec SP_CartDtlTmp_Del1 ?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($part_number)),
                     strtoupper(trim($user_id)), strtoupper(trim($companyid))
                 ]);
@@ -882,38 +739,19 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
                 'bo'            => 'required',
-                'umur_faktur'   => 'required'
+                'umur_faktur'   => 'required',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Status BO dan umur faktur tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, status BO, dan umur faktur tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
+            $user_id = strtoupper(trim($request->userlogin->user_id));
+            $role_id = strtoupper(trim($request->userlogin->role_id));
+            $companyid = strtoupper(trim($request->userlogin->companyid));
 
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.role_id, '') as role_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $role_id = strtoupper(trim($sql->role_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
                     ->where('msdealer.companyid', strtoupper(trim($companyid)))
@@ -957,13 +795,17 @@ class CartController extends Controller {
                             left join discp with (nolock) on produk.kd_produk=discp.kd_produk and
                                         iif(isnull(company.inisial, 0) = 1, 'RK', 'PC')=discp.cabang";
 
-            $result = DB::select($sql, [ strtoupper(trim($kode_key)), strtoupper(trim($companyid)) ]);
+            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($kode_key)), strtoupper(trim($companyid)) ]);
 
             foreach($result as $data) {
                 if(trim($data->kode_tpc) == '20') {
                     if((float)$data->disc1 > 0 || (float)$data->disc2 > 0) {
                         return ApiResponse::responseWarning('Ada diskon pada Part number '.strtoupper(trim($data->part_number)).'.
                                     (TPC 20 tidak boleh menggunakan data diskon)');
+                    }
+
+                    if((double)$data->harga <= 0) {
+                        return ApiResponse::responseWarning('Kolom harga pada Part number '.strtoupper(trim($data->part_number)).' masih belum di entry');
                     }
 
                     if((int)$data->status_cek_hpp == 1) {
@@ -999,15 +841,15 @@ class CartController extends Controller {
                 }
             }
 
-            DB::transaction(function () use ($request, $kode_dealer, $keterangan, $user_id, $role_id, $statusBO, $companyid) {
-                DB::insert("exec SP_Cart_Submit1 ?,?,?,?,?,?,?", [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $keterangan, $user_id, $role_id, $statusBO, $companyid) {
+                DB::connection($request->get('divisi'))->insert("exec SP_Cart_Submit1 ?,?,?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($statusBO)), $request->get('umur_faktur'),
                     strtoupper(trim($keterangan)), strtoupper(trim($user_id)), strtoupper(trim($role_id)),
                     strtoupper(trim($companyid))
                 ]);
             });
 
-            $sql = DB::table('cart')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('cart')->lock('with (nolock)')
                     ->selectRaw("isnull(cart.no_order, '') as nomor_order")
                     ->where('cart.user_id', strtoupper(trim($user_id)))
                     ->where('cart.kd_dealer', strtoupper(trim($kode_dealer)))
@@ -1020,7 +862,7 @@ class CartController extends Controller {
             }
             $nomor_order = strtoupper(trim($sql->nomor_order));
 
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof, count(pof_dtl.no_pof) as jumlah_item,
                                 isnull(pof.kd_sales, '') as kode_sales, isnull(salesman.nm_sales, '') as nama_sales,
                                 isnull(pof.kd_dealer, '') as kode_dealer, isnull(dealer.nm_dealer, '') as nama_dealer,

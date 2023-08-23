@@ -14,7 +14,8 @@ class SuggestionController extends Controller
             $url = 'suggest/order-suggest';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'ms_dealer_id'  => $request->get('ms_dealer_id')
+                'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -30,7 +31,8 @@ class SuggestionController extends Controller
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
-                'list_item'     => $request->get('list_item')
+                'list_item'     => $request->get('list_item'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

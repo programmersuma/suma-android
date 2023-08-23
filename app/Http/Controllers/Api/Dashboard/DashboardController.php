@@ -15,45 +15,22 @@ class DashboardController extends Controller
         $validate = Validator::make($request->all(), [
             'year'      => 'required|string',
             'month'     => 'required|string',
-            'category'  => 'required|string'
+            'category'  => 'required|string',
+            'divisi'    => 'required|string',
         ]);
 
         if ($validate->fails()) {
-            return ApiResponse::responseWarning('Category, tahun, dan bulan harus terisi');
+            return ApiResponse::responseWarning('Data divisi, kategori, tahun, dan bulan harus terisi');
         }
 
-        $token = $request->header('Authorization');
-        $formatToken = explode(" ", $token);
-        $session_id = trim($formatToken[1]);
+        $kode_mkr = strtoupper(trim($request->userlogin->user_id));
 
-        $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                            isnull(users.id, 0) as id_user,
-                            isnull(users.user_id, '') as user_id,
-                            isnull(users.role_id, '') as role_id,
-                            isnull(users.companyid, '') as companyid")
-                ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                })
-                ->where('user_api_sessions.session_id', $session_id)
-                ->first();
-
-        if(empty($sql->user_id)) {
-            return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-        }
-
-        $id_user = strtoupper(trim($sql->id_user));
-        $user_id = strtoupper(trim($sql->user_id));
-        $role_id = strtoupper(trim($sql->role_id));
-        $kode_mkr = strtoupper(trim($sql->user_id));
-        $companyid = strtoupper(trim($sql->companyid));
-
-        if (strtoupper(trim($role_id)) == 'MD_H3_KORSM') {
-            $sql = DB::table("superspv")->lock('with (nolock)')
+        if (strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            $sql = DB::connection($request->get('divisi'))
+                    ->table("superspv")->lock('with (nolock)')
                     ->selectRaw("isnull(superspv.kd_spv, '') as kode_spv")
-                    ->where('superspv.nm_spv', strtoupper(trim($user_id)))
-                    ->where('superspv.companyid', strtoupper(trim($companyid)))
+                    ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
+                    ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->kode_spv) || trim($sql->kode_spv) == '') {
@@ -67,15 +44,17 @@ class DashboardController extends Controller
             // ======================================================================
             // RESULT RETURN
             // ======================================================================
-            if($request->get('divisi') == 'FDR') {
-                return $this->dashboardSalesmanFdr($request->get('year'), $request->get('month'),
-                        $request->get('item_group'), strtoupper(trim($role_id)), strtoupper(trim($kode_mkr)),
-                        (int)$id_user, strtoupper(trim($user_id)), strtoupper(trim($companyid)));
+            if(strtoupper(trim($request->get('divisi'))) == 'SQLSRV_GENERAL') {
+                return $this->dashboardSalesmanFdr($request, $request->get('year'), $request->get('month'),
+                        $request->get('item_group'), strtoupper(trim($request->userlogin->role_id)), strtoupper(trim($kode_mkr)),
+                        (int)$request->userlogin->id, strtoupper(trim($request->userlogin->user_id)),
+                        strtoupper(trim($request->userlogin->companyid)));
             } else {
-                return $this->dashboardSalesman($request->get('year'), $request->get('month'),
-                        $request->get('item_group'), strtoupper(trim($role_id)),
-                        strtoupper(trim($kode_mkr)), (int)$id_user, strtoupper(trim($user_id)),
-                        strtoupper(trim($companyid)));
+                return $this->dashboardSalesman($request, $request->get('year'), $request->get('month'),
+                        $request->get('item_group'), strtoupper(trim($request->userlogin->role_id)),
+                        strtoupper(trim($kode_mkr)), (int)$request->userlogin->id,
+                        strtoupper(trim($request->userlogin->user_id)),
+                        strtoupper(trim($request->userlogin->companyid)));
             }
 
         } elseif (strtoupper(trim($request->get('category'))) == 'DEALER') {
@@ -90,10 +69,11 @@ class DashboardController extends Controller
             // ======================================================================
             // RESULT RETURN
             // ======================================================================
-            return $this->dashboardDealer($request->get('year'), $request->get('month'), $request->get('ms_dealer_id'),
-                            $request->get('item_group'), strtoupper(trim($role_id)), strtoupper(trim($companyid)));
+            return $this->dashboardDealer($request, $request->get('year'), $request->get('month'), $request->get('ms_dealer_id'),
+                            $request->get('item_group'), strtoupper(trim($request->userlogin->role_id)),
+                            strtoupper(trim($request->userlogin->companyid)));
         } else {
-            if (strtoupper(trim($role_id)) != 'MD_H3_MGMT') {
+            if (strtoupper(trim($request->userlogin->role_id)) != 'MD_H3_MGMT') {
                 return ApiResponse::responseWarning('Anda tidak memiliki akses untuk masuk ke halaman ini');
             }
             $validate = Validator::make($request->all(), [
@@ -107,12 +87,12 @@ class DashboardController extends Controller
             // ======================================================================
             // RESULT RETURN
             // ======================================================================
-            return $this->dashboardManagement($request->get('year'), $request->get('month'),
-                            $request->get('item_group'), strtoupper(trim($companyid)));
+            return $this->dashboardManagement($request, $request->get('year'), $request->get('month'), $request->get('item_group'),
+                            strtoupper(trim($request->userlogin->companyid)));
         }
     }
 
-    public function dashboardSalesman($year, $month, $item_group, $role_id, $kode_mkr, $id_user, $user_id, $companyid) {
+    public function dashboardSalesman($request, $year, $month, $item_group, $role_id, $kode_mkr, $id_user, $user_id, $companyid) {
         $sql = "select  cast(isnull(sum(target_jual.amount_target_total), 0) as decimal(18,0)) as total_target,
                         cast(isnull(sum(faktur.amount_faktur_total), 0) - isnull(sum(retur.amount_total), 0) as decimal(18,0)) as total_omzet,
                         cast(isnull(sum(faktur.amount_faktur_total), 0) as decimal(18,0)) as total_penjualan,
@@ -428,7 +408,7 @@ class DashboardController extends Controller
                             salesman.kd_sales=jumlah_visit.kd_sales
         group by salesman.companyid ";
 
-        $dashboard_salesman = DB::select($sql);
+        $dashboard_salesman = DB::connection($request->get('divisi'))->select($sql);
 
         // ====================================================================================
         // Ranking Salesman
@@ -467,7 +447,7 @@ class DashboardController extends Controller
 
         $sql .= " order by isnull(salesman_rank.rank, 0) asc";
 
-        $salesman_rank = DB::select($sql);
+        $salesman_rank = DB::connection($request->get('divisi'))->select($sql);
 
         $data_my_rank = new Collection();
         $list_salesman_rank = [];
@@ -550,7 +530,7 @@ class DashboardController extends Controller
         return ApiResponse::responseSuccess('success', $data_dashboard->first());
     }
 
-    public function dashboardSalesmanFdr($year, $month, $item_group, $role_id, $kode_mkr, $id_user, $user_id, $companyid) {
+    public function dashboardSalesmanFdr($request, $year, $month, $item_group, $role_id, $kode_mkr, $id_user, $user_id, $companyid) {
         $sql = "select	omzet.companyid,
                         cast(sum(omzet.target_amount) as decimal(18,0)) as 'target_amount',
                         cast(sum(omzet.target_pcs) as decimal(18,0)) as 'target_pcs',
@@ -840,7 +820,7 @@ class DashboardController extends Controller
         )	jumlah_visit on omzet.companyid=jumlah_visit.companyid
         group by omzet.companyid";
 
-        $dashboard_salesman = DB::select($sql);
+        $dashboard_salesman = DB::connection($request->get('divisi'))->select($sql);
 
         // ====================================================================================
         // Ranking Salesman
@@ -879,7 +859,7 @@ class DashboardController extends Controller
 
         $sql .= " order by isnull(salesman_rank.rank, 0) asc";
 
-        $salesman_rank = DB::select($sql);
+        $salesman_rank = DB::connection($request->get('divisi'))->select($sql);
 
         $data_my_rank = new Collection();
         $list_salesman_rank = [];
@@ -968,8 +948,9 @@ class DashboardController extends Controller
         return ApiResponse::responseSuccess('success', $data_dashboard->first());
     }
 
-    public function dashboardDealer($year, $month, $ms_dealer_id, $item_group, $role_id, $companyid) {
-        $sql = DB::table('msdealer')->lock('with (nolock)')
+    public function dashboardDealer($request, $year, $month, $ms_dealer_id, $item_group, $role_id, $companyid) {
+        $sql = DB::connection($request->get('divisi'))
+            ->table('msdealer')->lock('with (nolock)')
             ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
             ->where('companyid', $companyid)
             ->where('id', $ms_dealer_id)
@@ -1149,7 +1130,7 @@ class DashboardController extends Controller
                 )	campaign on dealer.kd_dealer=campaign.kd_dealer and
                                 dealer.companyid=campaign.companyid";
 
-            $dashboard_dealer = DB::select($sql);
+            $dashboard_dealer = DB::connection($request->get('divisi'))->select($sql);
             $data_dashboard = new Collection;
 
             foreach ($dashboard_dealer as $data) {
@@ -1164,21 +1145,22 @@ class DashboardController extends Controller
                 }
 
                 $data_dashboard[] = [
-                    'target'                => (float)$target_toko,
-                    'penjualan_amount'      => (float)$data->penjualan_amount,
-                    'penjualan_pcs'         => (float)$data->penjualan_pcs,
-                    'retur_amount'          => (float)$data->retur_amount,
-                    'retur_pcs'             => (float)$data->retur_pcs,
-                    'omzet_amount'          => (float)$data->omzet_amount,
-                    'omzet_pcs'             => (float)$data->omzet_pcs,
-                    'pencapaian_campaign'   => (float)$data->pencapaian_campaign
+                    'target'                => (double)$target_toko,
+                    'penjualan_amount'      => (double)$data->penjualan_amount,
+                    'penjualan_pcs'         => (double)$data->penjualan_pcs,
+                    'retur_amount'          => (double)$data->retur_amount,
+                    'retur_pcs'             => (double)$data->retur_pcs,
+                    'omzet_amount'          => (double)$data->omzet_amount,
+                    'omzet_pcs'             => (double)$data->omzet_pcs,
+                    'pencapaian_campaign'   => (double)$data->pencapaian_campaign
                 ];
             }
             return ApiResponse::responseSuccess('success',  $data_dashboard->first());
     }
 
-    public function dashboardManagement($year, $month, $item_group, $companyid) {
-        $sql = DB::table('stsclose')->lock('with (nolock)')
+    public function dashboardManagement($request, $year, $month, $item_group, $companyid) {
+        $sql = DB::connection($request->get('divisi'))
+                ->table('stsclose')->lock('with (nolock)')
                 ->where('companyid', $companyid)
                 ->first();
 
@@ -1478,7 +1460,7 @@ class DashboardController extends Controller
                 )	stock On company.companyid=stock.companyid And produk.kd_produk=stock.kd_produk
                 group by isnull(company.companyid, '') ";
 
-        $sql = DB::select($sql);
+        $sql = DB::connection($request->get('divisi'))->select($sql);
         $data_dashboard = new Collection;
 
         foreach ($sql as $result) {

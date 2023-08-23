@@ -40,8 +40,8 @@ class ApiResponse
     public static function responseError($user_id = null, $jenis = null, $menu = null, $proses = null,
         $error = null, $companyid = null) {
 
-        // DB::transaction(function () use ($user_id, $jenis, $menu, $proses, $error, $companyid) {
-        //     DB::insert('exec SP_ErrorPMO_Simpan ?,?,?,?,?,?', [
+        // DB::connection($request->get('divisi'))->transaction(function () use ($request, $user_id, $jenis, $menu, $proses, $error, $companyid) {
+        //     DB::connection($request->get('divisi'))->insert('exec SP_ErrorPMO_Simpan ?,?,?,?,?,?', [
         //         strtoupper(trim($user_id)), strtoupper(trim($jenis)), trim($menu), trim($proses), trim($error), strtoupper(trim($companyid))
         //     ]);
         // });

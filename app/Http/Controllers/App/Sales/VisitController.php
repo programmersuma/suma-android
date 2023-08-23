@@ -13,7 +13,9 @@ class VisitController extends Controller
         try {
             $url = 'visit/check-checkin';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
-            $body = [];
+            $body = [
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
@@ -27,7 +29,8 @@ class VisitController extends Controller
             $url = 'visit/date-visit';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'ms_dealer_id'  => $request->get('ms_dealer_id')
+                'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -46,7 +49,8 @@ class VisitController extends Controller
                 'date'          => $request->get('date'),
                 'latitude'      => $request->get('latitude'),
                 'longitude'     => $request->get('longitude'),
-                'keterangan'    => $request->get('keterangan')
+                'keterangan'    => $request->get('keterangan'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -64,6 +68,7 @@ class VisitController extends Controller
                 'code_visit'    => $request->get('code_visit'),
                 'latitude'      => $request->get('latitude'),
                 'longitude'     => $request->get('longitude'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -79,7 +84,8 @@ class VisitController extends Controller
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'code_visit'    => $request->get('code_visit'),
-                'keterangan'    => $request->get('keterangan')
+                'keterangan'    => $request->get('keterangan'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -94,9 +100,10 @@ class VisitController extends Controller
             $url = 'visit/list-date-visit';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'tanggal'   => $request->get('tanggal'),
-                'salesman'  => $request->get('salesman'),
-                'dealer'    => $request->get('dealer')
+                'tanggal'       => $request->get('tanggal'),
+                'salesman'      => $request->get('salesman'),
+                'dealer'        => $request->get('dealer'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -114,7 +121,8 @@ class VisitController extends Controller
                 'tanggal'       => $request->get('tanggal'),
                 'salesman'      => $request->get('salesman'),
                 'dealer'        => $request->get('dealer'),
-                'keterangan'    => $request->get('keterangan')
+                'keterangan'    => $request->get('keterangan'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -129,7 +137,8 @@ class VisitController extends Controller
             $url = 'visit/delete-date-visit';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'visit_code'    => $request->get('visit_code')
+                'visit_code'    => $request->get('visit_code'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

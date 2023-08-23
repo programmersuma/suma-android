@@ -15,55 +15,35 @@ class PofController extends Controller
     public function listPofOrder(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'month' => 'required|string'
+                'month'     => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Silahkan isi data bulan dan tahun terlebih dahulu');
+                return ApiResponse::responseWarning('Silahkan isi data divisi, bulan, dan tahun terlebih dahulu');
             }
-
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $role_id = strtoupper(trim($sql->role_id));
-            $companyid = strtoupper(trim($sql->companyid));
 
             $year = substr($request->get('month'), 0, 4);
             $month = substr($request->get('month'), 5, 2);
 
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.companyid, '') as companyid,
-                                isnull(pof.no_pof, '') as nomor_pof")
+                                isnull(pof.no_pof, '') as nomor_pof,
+                                isnull(pof.tgl_pof, '') as tanggal_pof,
+                                isnull(pof.approve, 0) as approve")
                     ->leftJoin(DB::raw('pof_dtl with (nolock)'), function($join) {
                         $join->on('pof_dtl.no_pof', '=', 'pof.no_pof')
                             ->on('pof_dtl.companyid', '=', 'pof.companyid');
                     })
                     ->whereYear('pof.tgl_pof', $year)
                     ->whereMonth('pof.tgl_pof', $month)
-                    ->where('pof.companyid', strtoupper(trim($companyid)));
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)));
 
-            if(strtoupper(trim($role_id)) == "MD_H3_SM") {
-                $sql->where('pof.kd_sales', strtoupper(trim($user_id)));
-            } elseif(strtoupper(trim($role_id)) == "D_H3") {
-                $sql->where('pof.kd_dealer', strtoupper(trim($user_id)));
+            if(strtoupper(trim($request->userlogin->role_id)) == "MD_H3_SM") {
+                $sql->where('pof.kd_sales', strtoupper(trim($request->userlogin->user_id)));
+            } elseif(strtoupper(trim($request->userlogin->role_id)) == "D_H3") {
+                $sql->where('pof.kd_dealer', strtoupper(trim($request->userlogin->user_id)));
             }
 
             if(!empty($request->get('salesman')) && trim($request->get('salesman')) != '') {
@@ -78,8 +58,8 @@ class PofController extends Controller
                 $sql->where('pof_dtl.kd_part', 'like', strtoupper(trim($request->get('part_number'))).'%');
             }
 
-            $sql = $sql->groupByRaw('pof.companyid, pof.no_pof')
-                        ->orderByRaw('pof.companyid, pof.no_pof')
+            $sql = $sql->groupByRaw("pof.companyid, pof.tgl_pof, pof.no_pof, pof.approve")
+                        ->orderByRaw("pof.companyid asc,  pof.approve asc, pof.tgl_pof desc, pof.no_pof desc")
                         ->paginate(10);
 
             $result = collect($sql)->toArray();
@@ -114,7 +94,7 @@ class PofController extends Controller
                                     pof.kd_tpc, pof.disc, pof.total, pof.sts_fakt, pof.usertime
                             from	pof with (nolock)
                             where	pof.no_pof in (".$nomor_pof_result.") and
-                                    pof.companyid='".strtoupper(trim($companyid))."'
+                                    pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'
                         )	pof
                                 left join salesman with (nolock) on pof.kd_sales=salesman.kd_sales and
                                             pof.companyid=salesman.companyid
@@ -122,7 +102,7 @@ class PofController extends Controller
                                             pof.companyid=dealer.companyid
                         order by isnull(pof.approve, 0) asc, pof.tgl_pof desc, pof.no_pof desc";
 
-                $result = DB::select($sql);
+                $result = DB::connection($request->get('divisi'))->select($sql);
 
                 foreach($result as $result) {
                     $data_order_pof[] = [
@@ -155,34 +135,13 @@ class PofController extends Controller
     public function detailPofOrder(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'nomor_pof' => 'required|string'
+                'nomor_pof' => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Silahkan isi nomor pof terlebih dahulu');
+                return ApiResponse::responseWarning('Silahkan isi divisi dan nomor pof terlebih dahulu');
             }
-
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
 
             $sql = "select	isnull(pof.no_pof, '') as order_code, isnull(pof.tgl_pof, '') as order_date,
                             isnull(pof.kd_sales, '') as sales_code, isnull(salesman.nm_sales, '') as sales_name,
@@ -231,7 +190,7 @@ class PofController extends Controller
                                 pof.bo, pof.disc, pof.total, pof.sts_fakt
                         from	pof with (nolock)
                         where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
-                                pof.companyid='".strtoupper(trim($companyid))."'";
+                                pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
 
             if (!empty($request->get('salesman')) && trim($request->get('salesman')) != '') {
                 $sql .= " and pof.kd_sales='".strtoupper(trim($request->get('salesman')))."'";
@@ -262,7 +221,7 @@ class PofController extends Controller
                                         pof.companyid=dealer_setting.companyid
                     order by pof_dtl.kd_part asc";
 
-            $result = DB::select($sql);
+            $result = DB::connection($request->get('divisi'))->select($sql);
 
             $data_order = new Collection();
             $data_detail_order = [];
@@ -378,35 +337,13 @@ class PofController extends Controller
     public function approveOrder(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'nomor_pof' => 'required|string'
+                'nomor_pof' => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Silahkan isi nomor pof terlebih dahulu');
+                return ApiResponse::responseWarning('Silahkan isi data divisi dan nomor pof terlebih dahulu');
             }
-
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
 
             $sql = "select	isnull(pof.companyid, '') as companyid, isnull(pof.no_pof, '') as no_pof,
                             isnull(pof.kd_sales, '') as kode_sales, isnull(pof.kd_dealer, '') as kode_dealer,
@@ -421,12 +358,12 @@ class PofController extends Controller
                                     left join faktur_discnol with (nolock) on pof.kd_dealer=faktur_discnol.kd_dealer and
                                                 pof.companyid=faktur_discnol.companyid
                         where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
-                                pof.companyid='".strtoupper(trim($companyid))."'
+                                pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'
                     )	pof
                             left join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_order and
                                         pof.companyid=pof_dtl.companyid";
 
-            $result_check_disc = DB::select($sql);
+            $result_check_disc = DB::connection($request->get('divisi'))->select($sql);
 
             $jumlah_data = 0;
 
@@ -448,10 +385,11 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('Nomor POF tidak terdaftar');
             }
 
-            DB::transaction(function () use ($request, $user_id, $companyid) {
-                DB::insert('exec SP_Pof_Approve ?,?,?', [
-                    strtoupper(trim($request->get('nomor_pof'))),
-                    strtoupper(trim($user_id)), strtoupper(trim($companyid))
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))
+                    ->insert('exec SP_Pof_Approve ?,?,?', [
+                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->user_id)),
+                        strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
 
@@ -465,51 +403,32 @@ class PofController extends Controller
     public function cancelApprove(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'nomor_pof'     => 'required|string'
+                'nomor_pof'  => 'required|string',
+                'divisi'     => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Pilih nomor pof terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih data divisi dan nomor pof terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
                 return ApiResponse::responseWarning('Nomor POF tidak terdaftar');
             }
 
-            DB::transaction(function () use ($request, $companyid) {
-                DB::insert('exec SP_Pof_BatalApprove ?,?', [
-                    strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($companyid))
-                ]);
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))
+                    ->insert('exec SP_Pof_BatalApprove ?,?', [
+                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->companyid))
+                    ]);
             });
 
             return ApiResponse::responseSuccess('Approve POF berhasil dibatalkan', $request->all());
@@ -524,41 +443,20 @@ class PofController extends Controller
             $validate = Validator::make($request->all(), [
                 'nomor_pof' => 'required|string',
                 'tpc'       => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof dan kode tpc tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, nomor pof, dan kode tpc tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -570,13 +468,14 @@ class PofController extends Controller
             }
 
             if(trim($request->get('tpc')) != trim($sql->kode_tpc)) {
-                DB::transaction(function () use ($request, $user_id, $companyid) {
-                    DB::insert('exec SP_Pof_UpdateTpc ?,?,?,?', [
-                        strtoupper(trim($request->get('nomor_pof'))),
-                        strtoupper(trim($request->get('tpc'))),
-                        strtoupper(trim($user_id)),
-                        strtoupper(trim($companyid))
-                    ]);
+                DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                    DB::connection($request->get('divisi'))
+                        ->insert('exec SP_Pof_UpdateTpc ?,?,?,?', [
+                            strtoupper(trim($request->get('nomor_pof'))),
+                            strtoupper(trim($request->get('tpc'))),
+                            strtoupper(trim($request->userlogin->user_id)),
+                            strtoupper(trim($request->userlogin->companyid))
+                        ]);
                 });
             }
 
@@ -592,39 +491,19 @@ class PofController extends Controller
             $validate = Validator::make($request->all(), [
                 'nomor_pof' => 'required|string',
                 'status_bo' => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof dan status back order tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, nomor pof, dan status back order tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -635,11 +514,11 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di edit');
             }
 
-            DB::transaction(function () use ($request, $companyid) {
-                DB::update('update pof set bo=? where no_pof=? and companyid=?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->update('update pof set bo=? where no_pof=? and companyid=?', [
                     strtoupper(trim($request->get('status_bo'))),
                     strtoupper(trim($request->get('nomor_pof'))),
-                    strtoupper(trim($companyid)),
+                    strtoupper(trim($request->userlogin->companyid)),
                 ]);
             });
 
@@ -655,39 +534,18 @@ class PofController extends Controller
             $validate = Validator::make($request->all(), [
                 'nomor_pof' => 'required|string',
                 'umur_pof'  => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof dan umur pof tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, nomor pof, dan umur pof tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -698,15 +556,15 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di edit');
             }
 
-            DB::transaction(function () use ($request, $companyid) {
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 $umur_pof = (int)$request->get('umur_pof');
 
-                DB::update('update  pof
+                DB::connection($request->get('divisi'))->update('update  pof
                             set     umur_pof=?,
                                     tgl_akhir_pof=convert(varchar(10),dateadd(day,'.(int)$umur_pof.',pof.tgl_pof), 120)
                             where   no_pof=? and companyid=?', [
                     (int)$umur_pof, strtoupper(trim($request->get('nomor_pof'))),
-                    strtoupper(trim($companyid)),
+                    strtoupper(trim($request->userlogin->companyid)),
                 ]);
             });
 
@@ -720,40 +578,19 @@ class PofController extends Controller
     public function updateKeterangan(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'nomor_pof'     => 'required|string'
+                'nomor_pof'     => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi dan nomor pof tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -764,11 +601,11 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di edit');
             }
 
-            DB::transaction(function () use ($request, $companyid) {
-                DB::update('update pof set ket=? where no_pof=? and companyid=?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->update('update pof set ket=? where no_pof=? and companyid=?', [
                     strtoupper(trim($request->get('keterangan'))),
                     strtoupper(trim($request->get('nomor_pof'))),
-                    strtoupper(trim($companyid)),
+                    strtoupper(trim($request->userlogin->companyid)),
                 ]);
             });
 
@@ -784,39 +621,18 @@ class PofController extends Controller
             $validate = Validator::make($request->all(), [
                 'nomor_pof' => 'required|string',
                 'discount'  => 'required|string',
+                'divisi'    => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof dan discount tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, nomor pof, dan discount tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -827,11 +643,11 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di edit');
             }
 
-            DB::transaction(function () use ($request, $companyid) {
-                DB::insert('exec SP_Pof_UpdateDiscount ?,?,?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->insert('exec SP_Pof_UpdateDiscount ?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))),
                     (double)$request->get('discount'),
-                    strtoupper(trim($companyid))
+                    strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
 
@@ -845,41 +661,20 @@ class PofController extends Controller
     public function hapusPofOrder(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'nomor_pof'     => 'required|string'
+                'nomor_pof'     => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Pilih nomor pof terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih divisi dan nomor pof terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -890,9 +685,9 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di hapus');
             }
 
-            DB::transaction(function () use ($request, $companyid) {
-                DB::insert('exec SP_Pof_Hapus ?,?', [
-                    strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($companyid))
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->insert('exec SP_Pof_Hapus ?,?', [
+                    strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
 
@@ -909,36 +704,14 @@ class PofController extends Controller
                 'nomor_pof'     => 'required|string',
                 'part_number'   => 'required|string',
                 'harga'         => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof, part number, dan harga part tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, nomor pof, part number, dan harga part tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
@@ -948,7 +721,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -963,7 +736,7 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('TPC nomor pof '.strtoupper(trim($request->get('nomor_pof'))).' adalah TPC 14. Kode TPC 14 tidak boleh mengganti harga');
             }
 
-            $sql = DB::table('part')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('part')->lock('with (nolock)')
                     ->selectRaw("isnull(part.kd_part, '') as part_number,
                                 isnull(part.hrg_netto, 0) as harga_netto,
                                 isnull(part.cek_hpp, 0) as status_cek_hpp,
@@ -973,7 +746,7 @@ class PofController extends Controller
                         $join->on('company.companyid', '=', 'part.companyid');
                     })
                     ->where('part.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('part.companyid', strtoupper(trim($companyid)))
+                    ->where('part.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->part_number) || trim($sql->part_number) == '') {
@@ -992,11 +765,11 @@ class PofController extends Controller
                 }
             }
 
-            DB::transaction(function () use ($request, $user_id, $companyid) {
-                DB::insert('exec SP_PofDtl_UpdateHarga ?,?,?,?,?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateHarga ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)$request->get('harga'), strtoupper(trim($user_id)),
-                    strtoupper(trim($companyid))
+                    (double)$request->get('harga'), strtoupper(trim($request->userlogin->user_id)),
+                    strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
 
@@ -1013,36 +786,14 @@ class PofController extends Controller
                 'nomor_pof'     => 'required|string',
                 'part_number'   => 'required|string',
                 'quantity'      => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof, part number, dan jumlah order tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, nomor pof, part number, dan jumlah order tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->leftJoin(DB::raw('pof_dtl with (nolock)'), function($join) {
@@ -1051,7 +802,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -1062,11 +813,11 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di edit');
             }
 
-            DB::transaction(function () use ($request, $user_id, $companyid) {
-                DB::insert('exec SP_PofDtl_UpdateJmlOrder ?,?,?,?,?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateJmlOrder ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)$request->get('quantity'), strtoupper(trim($user_id)),
-                    strtoupper(trim($companyid))
+                    (double)$request->get('quantity'), strtoupper(trim($request->userlogin->user_id)),
+                    strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
 
@@ -1083,36 +834,14 @@ class PofController extends Controller
                 'nomor_pof'     => 'required|string',
                 'part_number'   => 'required|string',
                 'discount'      => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Nomor pof, part number, dan discount tidak boleh kosong');
+                return ApiResponse::responseWarning('Data divisi, nomor pof, part number, dan discount tidak boleh kosong');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
@@ -1122,7 +851,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -1137,11 +866,11 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('TPC nomor pof '.strtoupper(trim($request->get('nomor_pof'))).' adalah TPC 20. Kode TPC 20 tidak boleh mengganti diskon');
             }
 
-            DB::transaction(function () use ($request, $user_id, $companyid) {
-                DB::insert('exec SP_PofDtl_UpdateDiscDetail ?,?,?,?,?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateDiscDetail ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)$request->get('discount'), strtoupper(trim($user_id)),
-                    strtoupper(trim($companyid))
+                    (double)$request->get('discount'), strtoupper(trim($request->userlogin->user_id)),
+                    strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
 
@@ -1157,36 +886,14 @@ class PofController extends Controller
             $validate = Validator::make($request->all(), [
                 'nomor_pof'     => 'required|string',
                 'part_number'   => 'required|string',
+                'divisi'        => 'required|string',
             ]);
 
             if($validate->fails()){
-                return ApiResponse::responseWarning('Pilih nomor pof dan part number terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih data divisi, nomor pof, dan part number terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                        ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                    isnull(users.user_id, '') as user_id,
-                                    isnull(users.role_id, '') as role_id,
-                                    isnull(users.companyid, '') as companyid")
-                        ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                            $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                                ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                        })
-                        ->where('user_api_sessions.session_id', $session_id)
-                        ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('pof')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
@@ -1196,7 +903,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -1208,10 +915,10 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di edit');
             }
 
-            DB::transaction(function () use ($request, $user_id, $companyid) {
-                DB::insert('exec SP_PofDtl_HapusPart ?,?,?,?', [
+            DB::connection($request->get('divisi'))->transaction(function () use ($request) {
+                DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_HapusPart ?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    strtoupper(trim($user_id)), strtoupper(trim($companyid))
+                    strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
 

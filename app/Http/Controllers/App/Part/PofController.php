@@ -18,7 +18,8 @@ class PofController extends Controller
                 'month'         => $request->get('month'),
                 'salesman'      => $request->get('salesman'),
                 'dealer'        => $request->get('dealer'),
-                'part_number'   => $request->get('part_number')
+                'part_number'   => $request->get('part_number'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -33,7 +34,8 @@ class PofController extends Controller
             $url = 'pof/detail-pof-order';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof' => $request->get('nomor_pof')
+                'nomor_pof'     => $request->get('nomor_pof'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -48,7 +50,8 @@ class PofController extends Controller
             $url = 'pof/order-approve';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof' => $request->get('nomor_pof')
+                'nomor_pof'     => $request->get('nomor_pof'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -63,7 +66,8 @@ class PofController extends Controller
             $url = 'pof/cancel-approve';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof' => $request->get('nomor_pof')
+                'nomor_pof'     => $request->get('nomor_pof'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -78,8 +82,9 @@ class PofController extends Controller
             $url = 'pof/update-tpc';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof' => $request->get('nomor_pof'),
-                'tpc'       => $request->get('tpc')
+                'nomor_pof'     => $request->get('nomor_pof'),
+                'tpc'           => $request->get('tpc'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -94,8 +99,9 @@ class PofController extends Controller
             $url = 'pof/update-back-order';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof' => $request->get('nomor_pof'),
-                'status_bo' => $request->get('status_bo')
+                'nomor_pof'     => $request->get('nomor_pof'),
+                'status_bo'     => $request->get('status_bo'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -110,8 +116,9 @@ class PofController extends Controller
             $url = 'pof/update-umur-pof';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof' => $request->get('nomor_pof'),
-                'umur_pof'  => $request->get('umur_pof')
+                'nomor_pof'     => $request->get('nomor_pof'),
+                'umur_pof'      => $request->get('umur_pof'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -127,7 +134,8 @@ class PofController extends Controller
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'nomor_pof'     => $request->get('nomor_pof'),
-                'keterangan'    => $request->get('keterangan')
+                'keterangan'    => $request->get('keterangan'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -143,7 +151,8 @@ class PofController extends Controller
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'nomor_pof'     => $request->get('nomor_pof'),
-                'discount'      => $request->get('discount')
+                'discount'      => $request->get('discount'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -158,7 +167,8 @@ class PofController extends Controller
             $url = 'pof/hapus-pof-order';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof' => $request->get('nomor_pof')
+                'nomor_pof'     => $request->get('nomor_pof'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -175,7 +185,8 @@ class PofController extends Controller
             $body = [
                 'nomor_pof'     => $request->get('nomor_pof'),
                 'part_number'   => $request->get('part_number'),
-                'harga'         => $request->get('harga')
+                'harga'         => $request->get('harga'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -192,7 +203,8 @@ class PofController extends Controller
             $body = [
                 'nomor_pof'     => $request->get('nomor_pof'),
                 'part_number'   => $request->get('part_number'),
-                'quantity'      => $request->get('quantity')
+                'quantity'      => $request->get('quantity'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -209,7 +221,8 @@ class PofController extends Controller
             $body = [
                 'nomor_pof'     => $request->get('nomor_pof'),
                 'part_number'   => $request->get('part_number'),
-                'discount'      => $request->get('discount')
+                'discount'      => $request->get('discount'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -225,7 +238,8 @@ class PofController extends Controller
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'nomor_pof'     => $request->get('nomor_pof'),
-                'part_number'   => $request->get('part_number')
+                'part_number'   => $request->get('part_number'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

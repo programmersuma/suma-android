@@ -14,10 +14,11 @@ class SalesmanController extends Controller
             $url = 'sales/list-salesman';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'page'      => $request->get('page'),
-                'search'    => $request->get('search'),
+                'page'          => $request->get('page'),
+                'search'        => $request->get('search'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
-            $response = ApiRequest::requestGet($url, $header, $body);
+            $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
         } catch (\Exception $exception) {
@@ -30,9 +31,10 @@ class SalesmanController extends Controller
             $url = 'sales/list-selected-salesman';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'search'    => $request->get('salesman')
+                'search'        => $request->get('salesman'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
-            $response = ApiRequest::requestGet($url, $header, $body);
+            $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
         } catch (\Exception $exception) {
@@ -45,9 +47,10 @@ class SalesmanController extends Controller
             $url = 'sales/list-koordinator';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'search'    => $request->get('salesman')
+                'search'        => $request->get('salesman'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
-            $response = ApiRequest::requestGet($url, $header, $body);
+            $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
         } catch (\Exception $exception) {

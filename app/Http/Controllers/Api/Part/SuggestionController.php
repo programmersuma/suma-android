@@ -16,40 +16,19 @@ class SuggestionController extends Controller
     public function listSuggestOrder(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'ms_dealer_id' => 'required|int'
+                'ms_dealer_id'  => 'required|int',
+                'divisi'        => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih dealer_id terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih data divisi dan dealer Id terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.role_id, '') as role_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $role_id = strtoupper(trim($sql->role_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -109,7 +88,7 @@ class SuggestionController extends Controller
                                         select	faktur.companyid, faktur.no_faktur
                                         from	faktur with (nolock)
                                         where	faktur.tgl_faktur >= dateadd(month, -3, getdate()) and
-                                                faktur.companyid='".strtoupper(trim($companyid))."' and
+                                                faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
                                                 faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
                                     )	faktur
                                             inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
@@ -159,7 +138,7 @@ class SuggestionController extends Controller
                             (
                                 select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
                                 from	faktur with (nolock)
-                                where	faktur.companyid='".strtoupper(trim($companyid))."' and faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
+                                where	faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
                             )	faktur
                                     inner join fakt_dtl on faktur.no_faktur=fakt_dtl.no_faktur and
                                                 faktur.companyid=fakt_dtl.companyid
@@ -181,7 +160,7 @@ class SuggestionController extends Controller
                             (
                                 select	pof.companyid, pof.no_pof, pof.tgl_pof
                                 from	pof with (nolock)
-                                where	pof.companyid='".strtoupper(trim($companyid))."' and
+                                where	pof.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
                                         pof.kd_dealer='".strtoupper(trim($kode_dealer))."'
                             )	pof
                                     inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
@@ -198,7 +177,7 @@ class SuggestionController extends Controller
                         (
                             select	camp.companyid, camp.no_camp
                             from	camp with (nolock)
-                            where	camp.companyid='".strtoupper(trim($companyid))."' and
+                            where	camp.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
                                     camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
                                     camp.tgl_prd2 <= convert(varchar(10), getdate(), 120)
                         )	camp
@@ -212,13 +191,13 @@ class SuggestionController extends Controller
                             ), 0) as decimal(13,0)) > 0
                     order by part.kd_part asc";
 
-            $result = DB::select($sql);
+            $result = DB::connection($request->get('divisi'))->select($sql);
 
             $data_suggestion_order = new Collection();
 
             foreach($result as $data) {
                 if((double)$data->stock_total_part > 0) {
-                    if(strtoupper(trim($role_id)) == 'MD_H3_MGMT') {
+                    if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_MGMT') {
                         $available_part = 'Available '.trim($data->stock_total_part).' pcs';
                     } else {
                         $available_part = 'Available';
@@ -270,42 +249,19 @@ class SuggestionController extends Controller
         try {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id'  => 'required',
-                'list_item'     => 'required'
+                'list_item'     => 'required',
+                'divisi'        => 'required',
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih dealer_id terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih data divisi dan dealer Id terlebih dahulu');
             }
 
-            $token = $request->header('Authorization');
-            $formatToken = explode(" ", $token);
-            $session_id = trim($formatToken[1]);
-
-            $sql = DB::table('user_api_sessions')->lock('with (nolock)')
-                    ->selectRaw("isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.role_id, '') as role_id,
-                                isnull(users.user_id, '') as user_id,
-                                isnull(users.companyid, '') as companyid")
-                    ->leftJoin(DB::raw('users with (nolock)'), function($join) {
-                        $join->on('users.user_id', '=', 'user_api_sessions.user_id')
-                            ->on('users.companyid', '=', 'user_api_sessions.companyid');
-                    })
-                    ->where('user_api_sessions.session_id', $session_id)
-                    ->first();
-
-            if(empty($sql->user_id)) {
-                return ApiResponse::responseWarning('User Id tidak ditemukan, lakukan login ulang');
-            }
-
-            $user_id = strtoupper(trim($sql->user_id));
-            $role_id = strtoupper(trim($sql->role_id));
-            $companyid = strtoupper(trim($sql->companyid));
-
-            $sql = DB::table('msdealer')->lock('with (nolock)')
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
 
             if(empty($sql->kode_dealer)) {
@@ -314,15 +270,16 @@ class SuggestionController extends Controller
 
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            DB::transaction(function () use ($kode_dealer, $user_id, $companyid) {
-                DB::delete("delete
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer) {
+                DB::connection($request->get('divisi'))
+                    ->delete("delete
                             from    cart_dtlsuggesttmp
-                            where   cart_dtlsuggesttmp.user_id=? and
+                            where   cart_dtlsuggesttmp.kd_key=? and
                                     cart_dtlsuggesttmp.kd_dealer=? and
                                     cart_dtlsuggesttmp.companyid=?", [
-                                        strtoupper(trim($user_id)),
+                                        strtoupper(trim($request->userlogin->user_id)),
                                         strtoupper(trim($kode_dealer)),
-                                        strtoupper(trim($companyid)),
+                                        strtoupper(trim($request->userlogin->companyid)),
                                     ]);
             });
 
@@ -338,21 +295,26 @@ class SuggestionController extends Controller
                         $part_id_suggest .= ",".(int)$result->part_id;
                     }
                 }
-                dd($part_id_suggest);
+
                 foreach($list_part as $result) {
                     $list_part_suggest[] = [
-                        'user_id'   => strtoupper(trim($user_id)),
+                        'kd_key'    => strtoupper(trim($request->userlogin->user_id)).'/'.strtoupper(trim($kode_dealer)),
                         'kd_dealer' => strtoupper(trim($kode_dealer)),
                         'part_id'   => (int)$result->part_id,
                         'qty'       => (double)$result->qty,
-                        'companyid' => strtoupper(trim($companyid))
+                        'companyid' => strtoupper(trim($request->userlogin->companyid))
                     ];
                 }
 
-                DB::transaction(function () use ($list_part_suggest) {
-                    DB::table('cart_dtlsuggest')->insert($list_part_suggest);
-                });
+                DB::connection($request->get('divisi'))->transaction(function () use ($request, $list_part_suggest, $kode_dealer) {
+                    DB::connection($request->get('divisi'))->table('cart_dtlsuggesttmp')->insert($list_part_suggest);
 
+                    DB::connection($request->get('divisi'))
+                        ->insert('exec SP_CartDtlTmp_AddSuggestOrder ?,?,?,?', [
+                            strtoupper(trim($kode_dealer)), strtoupper(trim($request->userlogin->role_id)),
+                            strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->userlogin->companyid))
+                        ]);
+                });
 
                 return ApiResponse::responseSuccess('success', $request->all());
             }

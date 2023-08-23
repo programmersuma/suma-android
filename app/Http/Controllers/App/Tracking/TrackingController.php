@@ -23,7 +23,8 @@ class TrackingController extends Controller {
                 'month'             => $request->get('month'),
                 'status_bo'         => $request->get('status_bo'),
                 'status_invoice'    => $request->get('status_invoice'),
-                'status_shipping'   => $request->get('status_shipping')
+                'status_shipping'   => $request->get('status_shipping'),
+                'divisi'            => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -40,6 +41,7 @@ class TrackingController extends Controller {
             $body = [
                 'page'              => $request->get('page'),
                 'tracking_item_id'  => $request->get('tracking_item_id'),
+                'divisi'            => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
