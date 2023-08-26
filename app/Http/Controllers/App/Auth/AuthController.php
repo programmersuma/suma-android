@@ -25,6 +25,22 @@ class AuthController extends Controller {
         }
     }
 
+    protected function checkDivisi(Request $request) {
+        try {
+            $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
+            $url = 'auth/check-divisi';
+            $header = [ 'Authorization' => $credential ];
+            $body = [
+                'email'     => $request->get('email')
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
     protected function login(Request $request) {
         try {
             $url = 'auth/login';
@@ -45,11 +61,11 @@ class AuthController extends Controller {
 
     protected function forgotPassword(Request $request) {
         try {
+            $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
             $url = 'auth/forgot-password';
-            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $header = [ 'Authorization' => $credential ];
             $body = [
-                'email'     => $request->get('email'),
-                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+                'email'  => $request->get('email')
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

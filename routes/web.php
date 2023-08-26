@@ -28,11 +28,14 @@ use App\Http\Controllers\App\Sales\RealisasiVisitController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    // return view('welcome');
+    return view('email.forgotpassword');
 });
 
 Route::controller(AuthController::class)->group(function () {
     Route::post('oauth/token', 'oauthToken');
+    Route::post('auth/check-divisi', 'checkDivisi');
+
     Route::post('auth/login', 'login');
     Route::post('auth/logout', 'logout');
     Route::post('auth/forgot-password', 'forgotPassword');

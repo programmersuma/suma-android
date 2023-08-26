@@ -47,34 +47,64 @@
                                 <div class="text-gray-400 fw-bold fs-4 mb-1">Forgot password</div>
                                 <div class="text-gray-400 fw-bold fs-4 mb-2">Suma Parts Mobile Ordering</div>
 							</div>
-
-                            <div class="ms-15 mb-10">
-                                <table class="table align-middle gs-0 gy-1">
-                                    <thead>
-                                        <tr>
-                                            <th class="p-0 min-w-40px"></th>
-                                            <th class="p-0 min-w-120px"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td><span class="text-gray-400 fw-bolder mb-1 fs-6">Email</span></td>
-                                            <td><span class="text-dark fw-bolder text-hover-primary mb-1 fs-6">{{ trim($email_to) }}</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="text-gray-400 fw-bolder mb-1 fs-6">User Id</span></td>
-                                            <td><span class="text-dark fw-bolder text-hover-primary mb-1 fs-6">{{ strtoupper(trim($user_id)) }}</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td><span class="text-gray-400 fw-bolder mb-1 fs-6">Role</span></td>
-                                            <td><span class="text-dark fw-bolder text-hover-primary mb-1 fs-6">{{ strtoupper(trim($role_id)) }}</span></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div class="ms-5 mb-10">
+                                <div class="fv-row mt-10">
+                                     <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                                        <thead>
+                                            <tr class="fs-7 fw-bolder text-muted bg-light">
+                                                <th class="p-0 w-75px"></th>
+                                                <th class="p-0 w-40px"></th>
+                                                <th class="p-0 min-w-120px"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($users as $data)
+                                            <tr>
+                                                <td colspan="3" class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-danger fw-boldest fs-4">DIVISI {{ strtoupper(trim($data->divisi)) }}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-gray-400 fw-bolder fs-6">Email</span>
+                                                </td>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-gray-400 fw-bolder fs-6">:</span>
+                                                </td>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ trim($data->email) }}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-gray-400 fw-bolder fs-6">User ID</span>
+                                                </td>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-gray-400 fw-bolder fs-6">:</span>
+                                                </td>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ strtoupper(trim($data->user_id)) }}</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-gray-400 fw-bolder fs-6">Role</span>
+                                                </td>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-gray-400 fw-bolder fs-6">:</span>
+                                                </td>
+                                                <td class="ps-3 pe-3" style="text-align:left;vertical-align:center;">
+                                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ strtoupper(trim($data->role_id)) }}</span>
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="text-center mb-10">
                                 <div class="text-gray-400 fw-bold fs-4 mb-4">New Password :</div>
-								<h1 class="text-dark text-hover-primary mb-10">{{ trim($new_password) }}</h1>
+								<h1 class="text-danger text-hover-primary fw-boldest fs-1 mb-10">{{ trim($new_password) }}</h1>
 							</div>
 						</form>
 					</div>
