@@ -34,6 +34,8 @@ Route::group(['middleware' => 'authBasic'], function() {
         Route::post('oauth/token', 'oauthToken');
         Route::post('auth/check-divisi', 'checkDivisi');
         Route::post('auth/forgot-password', 'forgotPassword');
+        Route::post('auth/forgot-password-cek-status', 'forgotPasswordCekStatus');
+        Route::post('auth/forgot-password-submit', 'submitForgotPassword');
     });
 
     Route::controller(NotificationController::class)->group(function () {

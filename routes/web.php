@@ -42,6 +42,11 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('oauth/renew', 'renewLogin');
     Route::post('profile/profile', 'profile');
     Route::post('profile/change-password', 'changePassword');
+
+    Route::name('auth.')->group(function () {
+        Route::get('auth/reset-password/{access_reset}', 'resetPassword')->name('reset-password');
+        Route::post('auth/reset-password/submit', 'submitResetPassword')->name('submit-reset-password');
+    });
 });
 
 Route::controller(DashboardController::class)->group(function () {

@@ -5,7 +5,7 @@ namespace app\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
-
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -75,12 +75,9 @@ class AuthController extends Controller {
 
             $result = DB::connection('sqlsrv_honda')->select($sql);
 
-            $jumlah_data = 0;
             $data_divisi = [];
 
             foreach($result as $data) {
-                $jumlah_data = (double)$jumlah_data + 1;
-
                 $data_divisi[] = [
                     'divisi'    => strtoupper(trim($data->divisi))
                 ];
@@ -200,7 +197,7 @@ class AuthController extends Controller {
                     from	dbhonda.dbo.users
                                 inner join dbhonda.dbo.company with (nolock) on
                                             dbhonda.dbo.company.companyid=dbhonda.dbo.users.companyid
-                    where	dbhonda.dbo.users.email='adityahendrawan1031@gmail.com'
+                    where	dbhonda.dbo.users.email='".trim($request->get('email'))."'
                     union	all
                     select	isnull(dbsuma.dbo.company.companyid, '') as companyid,
                             iif(isnull(dbsuma.dbo.company.kd_file, 'A')='A', 'HONDA', 'GENERAL') as divisi,
@@ -210,16 +207,13 @@ class AuthController extends Controller {
                     from	dbsuma.dbo.users
                                 inner join dbsuma.dbo.company with (nolock) on
                                             dbsuma.dbo.company.companyid=dbsuma.dbo.users.companyid
-                    where	dbsuma.dbo.users.email='adityahendrawan1031@gmail.com'";
+                    where	dbsuma.dbo.users.email='".trim($request->get('email'))."'";
 
             $result = DB::connection('sqlsrv_honda')->select($sql);
 
             $data_user = new Collection();
-            $data_user_email = '';
 
             foreach($result as $data) {
-                $data_user_email = trim($data->email);
-
                 $data_user->push((object) [
                     'companyid'     => strtoupper(trim($data->companyid)),
                     'divisi'        => strtoupper(trim($data->divisi)),
@@ -233,14 +227,19 @@ class AuthController extends Controller {
                 return ApiResponse::responseWarning('Alamat email tidak terdaftar');
             }
 
-            $password = mt_rand(100000, 999999);
+            $link_user_reset = trim($data_user[0]->email).':'.strtotime('+1 hour');
 
             $data = [
                 'subject'       => 'Forgot Password Suma',
                 'email_from'    => 'programmer.sumahondasby@gmail.com',
-                'email_to'      => trim($data_user_email),
-                'users'         => (object)$data_user,
-                'new_password'  => $password,
+                'email_to'      => trim($data_user[0]->email),
+                'users'         => (object)[
+                    'user_id'   => strtoupper(trim($data_user[0]->user_id)),
+                    'role_id'   => strtoupper(trim($data_user[0]->role_id)),
+                    'email'     => trim($data_user[0]->email),
+                    'link'      => trim(config('constants.app.app_base_url')).'auth/reset-password/'.
+                                    base64_encode(base64_encode(base64_encode(base64_encode(base64_encode($link_user_reset))))),
+                ],
             ];
 
             Mail::send('email.forgotpassword', $data, function ($message) use ($data) {
@@ -249,17 +248,107 @@ class AuthController extends Controller {
                 $message->subject($data['subject']);
             });
 
-            DB::connection('sqlsrv_honda')->transaction(function () use ($password, $data_user_email) {
+            DB::connection('sqlsrv_honda')->transaction(function () use ($data_user) {
                 DB::connection('sqlsrv_honda')
-                    ->update('update users set password=? where email=?', [ bcrypt($password), trim($data_user_email) ]);
+                    ->update('update users set status_reset_password=1 where email=?', [ trim($data_user[0]->email) ]);
             });
 
-            DB::connection('sqlsrv_general')->transaction(function () use ($password, $data_user_email) {
+            DB::connection('sqlsrv_general')->transaction(function () use ($data_user) {
                 DB::connection('sqlsrv_general')
-                    ->update('update users set password=? where email=?', [ bcrypt($password), trim($data_user_email) ]);
+                    ->update('update users set status_reset_password=1 where email=?', [ trim($data_user[0]->email) ]);
             });
 
             return ApiResponse::responseSuccess('Password baru telah terkirim ke alamat email anda');
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
+
+    protected function forgotPasswordCekStatus(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'email'     => 'required|string'
+            ]);
+
+            if ($validate->fails()) {
+                return ApiResponse::responseWarning('Data email tidak boleh kosong');
+            }
+
+            $sql = "select	isnull(dbhonda.dbo.company.companyid, '') as companyid,
+                            iif(isnull(dbhonda.dbo.company.kd_file, 'A')='A', 'HONDA', 'GENERAL') as divisi,
+                            isnull(dbhonda.dbo.users.email, '') as email,
+                            isnull(dbhonda.dbo.users.user_id, '') as user_id,
+                            isnull(dbhonda.dbo.users.role_id, '') as role_id,
+                            isnull(dbhonda.dbo.users.status_reset_password, 0) as status_reset_password
+                    from	dbhonda.dbo.users
+                                inner join dbhonda.dbo.company with (nolock) on
+                                            dbhonda.dbo.company.companyid=dbhonda.dbo.users.companyid
+                    where	dbhonda.dbo.users.email='".trim($request->get('email'))."'
+                    union	all
+                    select	isnull(dbsuma.dbo.company.companyid, '') as companyid,
+                            iif(isnull(dbsuma.dbo.company.kd_file, 'A')='A', 'HONDA', 'GENERAL') as divisi,
+                            isnull(dbsuma.dbo.users.email, '') as email,
+                            isnull(dbsuma.dbo.users.user_id, '') as user_id,
+                            isnull(dbsuma.dbo.users.role_id, '') as role_id,
+                            isnull(dbsuma.dbo.users.status_reset_password, 0) as status_reset_password
+                    from	dbsuma.dbo.users
+                                inner join dbsuma.dbo.company with (nolock) on
+                                            dbsuma.dbo.company.companyid=dbsuma.dbo.users.companyid
+                    where	dbsuma.dbo.users.email='".trim($request->get('email'))."'";
+
+            $result = DB::connection('sqlsrv_honda')->select($sql);
+
+            $data_user = new Collection();
+
+            foreach($result as $data) {
+                $data_user->push((object) [
+                    'companyid'             => strtoupper(trim($data->companyid)),
+                    'divisi'                => strtoupper(trim($data->divisi)),
+                    'email'                 => trim($data->email),
+                    'user_id'               => strtoupper(trim($data->user_id)),
+                    'role_id'               => strtoupper(trim($data->role_id)),
+                    'status_reset_password' => trim($data->status_reset_password),
+                ]);
+            }
+
+            if(empty($data_user)) {
+                return ApiResponse::responseWarning('Alamat email tidak terdaftar');
+            }
+
+            return ApiResponse::responseSuccess('success', $data_user->first());
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
+
+    protected function submitForgotPassword(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'email'     => 'required|string',
+                'password'  => 'required|string',
+            ]);
+
+            if ($validate->fails()) {
+                return ApiResponse::responseWarning('Data email dan password baru harus terisi');
+            }
+
+            DB::connection('sqlsrv_honda')->transaction(function () use ($request) {
+                DB::connection('sqlsrv_honda')
+                    ->update('update users set password=?, status_reset_password=0 where email=?', [
+                        bcrypt($request->get('password')), trim($request->get('email'))
+                    ]);
+            });
+
+            DB::connection('sqlsrv_general')->transaction(function () use ($request) {
+                DB::connection('sqlsrv_general')
+                    ->update('update users set password=?, status_reset_password=0 where email=?', [
+                        bcrypt($request->get('password')), trim($request->get('email'))
+                    ]);
+            });
+
+            return ApiResponse::responseSuccess('Password anda berhasil diubah');
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
