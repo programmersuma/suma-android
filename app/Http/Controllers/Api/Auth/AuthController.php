@@ -237,7 +237,7 @@ class AuthController extends Controller {
                     'user_id'   => strtoupper(trim($data_user[0]->user_id)),
                     'role_id'   => strtoupper(trim($data_user[0]->role_id)),
                     'email'     => trim($data_user[0]->email),
-                    'link'      => trim(config('constants.app.app_base_url')).'auth/reset-password/'.
+                    'link'      => trim(config('constants.app.app_url_hosting')).'/auth/reset-password/'.
                                     base64_encode(base64_encode(base64_encode(base64_encode(base64_encode($link_user_reset))))),
                 ],
             ];
