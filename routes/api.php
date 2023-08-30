@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Catalog\CatalogController;
 use App\Http\Controllers\Api\Dashboard\DashboardController;
-use App\Http\Controllers\Api\Dashboard\NotificationController;
+use App\Http\Controllers\Api\Notification\NotificationController;
 use App\Http\Controllers\Api\Dealer\DealerController;
 use App\Http\Controllers\Api\Part\CartController;
 use App\Http\Controllers\Api\Part\PartController;
@@ -59,7 +59,6 @@ Route::group(['middleware' => 'checkToken'], function() {
     Route::controller(NotificationController::class)->group(function () {
         Route::post('notification/count', 'countNotification');
         Route::post('notification/list', 'listNotification');
-        Route::post('notification/push', 'pushNotification');
     });
 
     Route::controller(CatalogController::class)->group(function () {

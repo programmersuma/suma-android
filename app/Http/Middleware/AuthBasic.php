@@ -23,7 +23,7 @@ class AuthBasic
                 return response()->json([
                     'status' => 0,
                     'message' => [
-                        'Invalid Credential'
+                        'Invalid Credential [0]'
                     ]
                 ], 401);
             }
@@ -31,7 +31,7 @@ class AuthBasic
             return response()->json([
                 'status' => 0,
                 'message' => [
-                    'Invalid Credential'
+                    'Invalid Credential [1]'
                 ]
             ], 401);
         }
