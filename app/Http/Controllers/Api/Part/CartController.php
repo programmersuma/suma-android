@@ -886,7 +886,8 @@ class CartController extends Controller {
                     ->where('pof.no_order', strtoupper(trim($nomor_order)))
                     ->where('pof.companyid', strtoupper(trim($companyid)))
                     ->groupByRaw('pof.no_pof, pof.kd_sales, salesman.nm_sales, pof.kd_dealer,
-                                dealer.nm_dealer, pof.tgl_akhir_pof, pof.bo, pof.total')
+                                dealer.nm_dealer, pof.tgl_akhir_pof, pof.bo, pof.total,
+                                salesman.spv')
                     ->first();
 
             if(empty($sql->nomor_pof)) {
