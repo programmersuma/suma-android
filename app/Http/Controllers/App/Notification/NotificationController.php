@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\App\Dashboard;
+namespace App\Http\Controllers\App\Notification;
 
 use App\Helpers\ApiRequest;
 use Illuminate\Http\Request;
@@ -30,7 +30,7 @@ class NotificationController extends Controller
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'page'      => $request->get('page'),
-                'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -42,8 +42,9 @@ class NotificationController extends Controller
 
     public function pushNotification(Request $request) {
         try {
+            $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
             $url = 'notification/push';
-            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $header = [ 'Authorization' => $credential ];
             $body = [
                 'email'         => $request->get('email'),
                 'type'          => $request->get('type'),

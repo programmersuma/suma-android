@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\App\Auth\AuthController;
 use App\Http\Controllers\App\Catalog\CatalogController;
 use App\Http\Controllers\App\Dashboard\DashboardController;
-use App\Http\Controllers\App\Dashboard\NotificationController;
+use App\Http\Controllers\App\Notification\NotificationController;
 use App\Http\Controllers\App\Dealer\DealerController;
 use App\Http\Controllers\App\Part\CartController;
 use App\Http\Controllers\App\Part\PartController;

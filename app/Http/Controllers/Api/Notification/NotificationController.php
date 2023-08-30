@@ -1,14 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Api\Dashboard;
+namespace App\Http\Controllers\Api\Notification;
 
 use App\Helpers\ApiResponse;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
@@ -319,7 +317,6 @@ class NotificationController extends Controller
                                 ->on('dealer.companyid', '=', 'pof.companyid');
                         })
                         ->where('pof.no_pof', strtoupper(trim($request->get('code'))))
-                        ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                         ->first();
 
                 if(!empty($sql->nomor_pof)) {
@@ -344,7 +341,6 @@ class NotificationController extends Controller
                                     isnull(camp.tgl_prd2, '') as tanggal_akhir,
                                     isnull(camp.picture, '') as picture")
                         ->where('camp.no_camp', strtoupper(trim($request->get('code'))))
-                        ->where('camp.companyid', strtoupper(trim($request->userlogin->companyid)))
                         ->first();
 
                 if(!empty($sql->nomor_campaign)) {

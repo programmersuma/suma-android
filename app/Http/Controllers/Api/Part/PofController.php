@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Part;
 
+use App\Helpers\ApiRequest;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -180,14 +181,15 @@ class PofController extends Controller
                                 round((((isnull(pof_dtl.harga, 0) -
                                     round(((isnull(pof_dtl.harga, 0) * isnull(pof_dtl.disc1, 0)) / 100), 0)) *
                                         isnull(pof.disc, 0)) / 100), 0) as total_netto_part,
-                            isnull(company.kd_file, '') as kode_file
-
+                            isnull(company.kd_file, '') as kode_file,
+                            isnull(pof.usertime, '') as usertime
                     from
                     (
                         select	pof.companyid, pof.no_pof, pof.tgl_pof, pof.kd_sales,
                                 pof.kd_dealer, pof.ket, pof.kd_tpc, pof.umur_pof,
                                 pof.tgl_akhir_pof, pof.approve, pof.appr_usr,
-                                pof.bo, pof.disc, pof.total, pof.sts_fakt
+                                pof.bo, pof.disc, pof.total, pof.sts_fakt,
+                                pof.usertime
                         from	pof with (nolock)
                         where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
                                 pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
@@ -278,6 +280,7 @@ class PofController extends Controller
                     'total'         => (double)$result->total,
                     'approve'       => (int)$result->approve,
                     'approve_user'  => strtoupper(trim($result->approve_user)),
+                    'usertime'      => strtoupper(trim($result->usertime)),
                     'status_faktur' => (int)$result->status_faktur_header,
                 ]);
 
@@ -318,6 +321,7 @@ class PofController extends Controller
                     'total'         => (double)$data->total,
                     'approve'       => (int)$data->approve,
                     'approve_user'  => strtoupper(trim($data->approve_user)),
+                    'usertime'      => strtoupper(trim($data->usertime)),
                     'status_faktur' => (int)$data->status_faktur,
                     'detail'        => $data_detail_order
                 ]);
@@ -349,10 +353,11 @@ class PofController extends Controller
                             isnull(pof.kd_sales, '') as kode_sales, isnull(pof.kd_dealer, '') as kode_dealer,
                             isnull(pof.kd_dealer_discnol, '') as kode_dealer_disc_nol,
                             isnull(pof.kd_tpc, '') as kode_tpc, isnull(pof_dtl.kd_part, '') as part_number,
-                            isnull(pof.disc, 0) as disc_header, isnull(pof_dtl.disc1, 0) as disc_detail
+                            isnull(pof.disc, 0) as disc_header, isnull(pof_dtl.disc1, 0) as disc_detail,
+                            isnull(pof.user_entry, '') as user_entry
                     from
                     (
-                        select	top 1 pof.companyid, pof.no_pof, pof.kd_sales, pof.kd_dealer,
+                        select	top 1 pof.companyid, pof.no_pof, pof.kd_sales, pof.kd_dealer, pof.user_entry,
                                 pof.kd_tpc, pof.disc, faktur_discnol.kd_dealer as kd_dealer_discnol
                         from	pof with (nolock)
                                     left join faktur_discnol with (nolock) on pof.kd_dealer=faktur_discnol.kd_dealer and
@@ -366,9 +371,12 @@ class PofController extends Controller
             $result_check_disc = DB::connection($request->get('divisi'))->select($sql);
 
             $jumlah_data = 0;
+            $user_entry = '';
 
             foreach($result_check_disc as $data) {
                 $jumlah_data = (double)$jumlah_data + 1;
+
+                $user_entry = strtoupper(trim($data->user_entry));
 
                 if(trim($data->kode_tpc) == '14') {
                     if(trim($data->kode_dealer_disc_nol) == '') {
@@ -393,6 +401,45 @@ class PofController extends Controller
                 ]);
             });
 
+            // =======================================================================================================
+            // Notification - Salesman / Dealer
+            // =======================================================================================================
+            $sql = DB::connection($request->get('divisi'))->table('users')->lock('with (nolock)')
+                    ->selectRaw("isnull(user_api_sessions.companyid, '') as companyid,
+                                isnull(user_api_sessions.id, 0) as id,
+                                isnull(users.user_id, '') as user_id,
+                                isnull(users.email, '') as email,
+                                isnull(user_api_sessions.session_id, '') as session_id,
+                                isnull(user_api_sessions.fcm_id, '') as fcm_id")
+                    ->leftJoin(DB::raw('user_api_sessions with (nolock)'), function($join) {
+                        $join->on('user_api_sessions.user_id', '=', 'users.user_id')
+                            ->on('user_api_sessions.companyid', '=', 'users.companyid');
+                    })
+                    ->where('users.user_id', strtoupper(trim($user_entry)))
+                    ->orderBy('user_api_sessions.id', 'desc')
+                    ->first();
+
+            if(!empty($sql->fcm_id)) {
+                if(trim($sql->fcm_id) != '') {
+                    $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
+                    $url = 'notification/push';
+                    $header = [ 'Authorization' => $credential ];
+                    $body = [
+                        'email'         => trim($sql->email),
+                        'type'          => 'POF',
+                        'title'         => 'Approved Purchase Order Form',
+                        'message'       => 'Nomor order '.strtoupper(trim($request->get('nomor_pof'))).' anda sudah di approve oleh supervisor',
+                        'code'          => strtoupper(trim($request->get('nomor_pof'))),
+                        'user_process'  => strtoupper(trim($request->userlogin->user_id)),
+                        'divisi'        => $request->get('divisi')
+                    ];
+                    ApiRequest::requestPost($url, $header, $body);
+                }
+            }
+            // =======================================================================================================
+            //
+            // =======================================================================================================
+
             return ApiResponse::responseSuccess('Data Berhasil Di Approve', $request->all());
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
@@ -415,7 +462,8 @@ class PofController extends Controller
                     ->table('pof')->lock('with (nolock)')
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.kd_tpc, '') as kode_tpc,
-                                isnull(pof.approve, 0) as approved")
+                                isnull(pof.approve, 0) as approved,
+                                isnull(pof.user_entry, '') as user_entry")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
                     ->first();
@@ -424,12 +472,54 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('Nomor POF tidak terdaftar');
             }
 
+            $user_entry = strtoupper(trim($sql->user_entry));
+
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))
-                    ->insert('exec SP_Pof_BatalApprove ?,?', [
-                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->companyid))
+                    ->insert('exec SP_Pof_BatalApprove ?,?,?', [
+                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->user_id)),
+                        strtoupper(trim($request->userlogin->companyid))
                     ]);
             });
+
+            // =======================================================================================================
+            // Notification - Salesman / Dealer
+            // =======================================================================================================
+            $sql = DB::connection($request->get('divisi'))->table('users')->lock('with (nolock)')
+                    ->selectRaw("isnull(user_api_sessions.companyid, '') as companyid,
+                                isnull(user_api_sessions.id, 0) as id,
+                                isnull(users.user_id, '') as user_id,
+                                isnull(users.email, '') as email,
+                                isnull(user_api_sessions.session_id, '') as session_id,
+                                isnull(user_api_sessions.fcm_id, '') as fcm_id")
+                    ->leftJoin(DB::raw('user_api_sessions with (nolock)'), function($join) {
+                        $join->on('user_api_sessions.user_id', '=', 'users.user_id')
+                            ->on('user_api_sessions.companyid', '=', 'users.companyid');
+                    })
+                    ->where('users.user_id', strtoupper(trim($user_entry)))
+                    ->orderBy('user_api_sessions.id', 'desc')
+                    ->first();
+
+            if(!empty($sql->fcm_id)) {
+                if(trim($sql->fcm_id) != '') {
+                    $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
+                    $url = 'notification/push';
+                    $header = [ 'Authorization' => $credential ];
+                    $body = [
+                        'email'         => trim($sql->email),
+                        'type'          => 'POF',
+                        'title'         => 'Cancel Approve Purchase Order Form',
+                        'message'       => 'Status approve nomor order '.strtoupper(trim($request->get('nomor_pof'))).' di cancel oleh supervisor',
+                        'code'          => strtoupper(trim($request->get('nomor_pof'))),
+                        'user_process'  => strtoupper(trim($request->userlogin->user_id)),
+                        'divisi'        => $request->get('divisi')
+                    ];
+                    ApiRequest::requestPost($url, $header, $body);
+                }
+            }
+            // =======================================================================================================
+            //
+            // =======================================================================================================
 
             return ApiResponse::responseSuccess('Approve POF berhasil dibatalkan', $request->all());
         } catch (\Exception $exception) {

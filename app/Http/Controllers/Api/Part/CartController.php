@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Part;
 
+use App\Helpers\ApiRequest;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 
@@ -841,7 +842,8 @@ class CartController extends Controller {
                 }
             }
 
-            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $keterangan, $user_id, $role_id, $statusBO, $companyid) {
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $keterangan, $user_id,
+                                                                                $role_id, $statusBO, $companyid) {
                 DB::connection($request->get('divisi'))->insert("exec SP_Cart_Submit1 ?,?,?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($statusBO)), $request->get('umur_faktur'),
                     strtoupper(trim($keterangan)), strtoupper(trim($user_id)), strtoupper(trim($role_id)),
@@ -867,7 +869,8 @@ class CartController extends Controller {
                                 isnull(pof.kd_sales, '') as kode_sales, isnull(salesman.nm_sales, '') as nama_sales,
                                 isnull(pof.kd_dealer, '') as kode_dealer, isnull(dealer.nm_dealer, '') as nama_dealer,
                                 isnull(convert(varchar(10), pof.tgl_akhir_pof, 105), '') as tanggal_akhir_pof,
-                                isnull(pof.bo, '') as status_bo, isnull(pof.total, 0) as total")
+                                isnull(pof.bo, '') as status_bo, isnull(pof.total, 0) as total,
+                                isnull(salesman.spv, '') as kode_supervisor")
                     ->leftJoin(DB::raw('pof_dtl with (nolock)'), function($join) {
                         $join->on('pof_dtl.no_pof', '=', 'pof.no_pof')
                             ->on('pof_dtl.companyid', '=', 'pof.companyid');
@@ -889,6 +892,48 @@ class CartController extends Controller {
             if(empty($sql->nomor_pof)) {
                 return ApiResponse::responseWarning('Nomor purchase order form tidak ditemukan, coba lagi');
             }
+
+            $nomor_pof = strtoupper(trim($sql->nomor_pof));
+            $kode_supervisor = strtoupper(trim($sql->kode_supervisor));
+            // =======================================================================================================
+            // Notification - Supervisor
+            // =======================================================================================================
+            $sql = DB::connection($request->get('divisi'))->table('users')->lock('with (nolock)')
+                    ->selectRaw("isnull(user_api_sessions.companyid, '') as companyid,
+                                isnull(user_api_sessions.id, 0) as id,
+                                isnull(users.user_id, '') as user_id,
+                                isnull(users.email, '') as email,
+                                isnull(user_api_sessions.session_id, '') as session_id,
+                                isnull(user_api_sessions.fcm_id, '') as fcm_id")
+                    ->leftJoin(DB::raw('user_api_sessions with (nolock)'), function($join) {
+                        $join->on('user_api_sessions.user_id', '=', 'users.user_id')
+                            ->on('user_api_sessions.companyid', '=', 'users.companyid');
+                    })
+                    ->where('users.user_id', strtoupper(trim($kode_supervisor)))
+                    ->orderBy('user_api_sessions.id', 'desc')
+                    ->first();
+
+            if(!empty($sql->fcm_id)) {
+                if(trim($sql->fcm_id) != '') {
+
+                    $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
+                    $url = 'notification/push';
+                    $header = [ 'Authorization' => $credential ];
+                    $body = [
+                        'email'         => trim($sql->email),
+                        'type'          => 'POF',
+                        'title'         => 'New Order',
+                        'message'       => 'Ada purchase order form baru nomor '.strtoupper(trim($nomor_pof)).' dari user '.strtoupper(trim($request->userlogin->user_id)),
+                        'code'          => strtoupper(trim($nomor_pof)),
+                        'user_process'  => strtoupper(trim($request->userlogin->user_id)),
+                        'divisi'        => $request->get('divisi')
+                    ];
+                    ApiRequest::requestPost($url, $header, $body);
+                }
+            }
+            // =======================================================================================================
+            //
+            // =======================================================================================================
 
             $data = [
                 'code_order'    => strtoupper(trim($sql->nomor_pof)),

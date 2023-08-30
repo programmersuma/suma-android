@@ -80,7 +80,6 @@ class AuthController extends Controller {
     protected function resetPassword($access_reset) {
         try {
             $decode_access = base64_decode(base64_decode(base64_decode(base64_decode(base64_decode($access_reset)))));
-
             $split_string = explode(':', $decode_access);
 
             $email = $split_string[0];
