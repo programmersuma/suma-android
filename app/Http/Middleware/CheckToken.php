@@ -65,7 +65,7 @@ class CheckToken
             }
 
             if (Request::is('api/auth/login')) {
-                $request->merge(['userlogin' => (object)[
+                $request->merge(['userlogin' => [
                     'id'            => (int)$sql->id,
                     'user_id'       => strtoupper(trim($sql->user_id)),
                     'role_id'       => strtoupper(trim($sql->role_id)),
