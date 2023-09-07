@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends Controller
 {
+    private $database;
+
+    public function __construct() {
+        $this->database = \App\Services\FirebaseService::connect();
+    }
+
     public function countNotification(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
@@ -269,10 +275,15 @@ class NotificationController extends Controller
             $sql = DB::connection($request->get('divisi'))->table('users')->lock('with (nolock)')
                     ->selectRaw("isnull(user_api_sessions.companyid, '') as companyid,
                                 isnull(user_api_sessions.id, 0) as id,
+                                isnull(users.id, '') as id_user,
                                 isnull(users.user_id, '') as user_id,
                                 isnull(users.email, '') as email,
                                 isnull(user_api_sessions.session_id, '') as session_id,
-                                isnull(user_api_sessions.fcm_id, '') as fcm_id")
+                                isnull(user_api_sessions.fcm_id, '') as fcm_id,
+                                iif(isnull(company.kd_file, '')='A', 'HONDA', 'FDR') as divisi")
+                    ->leftJoin(DB::raw('company with (nolock)'), function($join) {
+                        $join->on('company.companyid', '=', 'users.companyid');
+                    })
                     ->leftJoin(DB::raw('user_api_sessions with (nolock)'), function($join) {
                         $join->on('user_api_sessions.user_id', '=', 'users.user_id')
                             ->on('user_api_sessions.companyid', '=', 'users.companyid');
@@ -286,17 +297,19 @@ class NotificationController extends Controller
             }
 
             $companyid_received = strtoupper(trim($sql->companyid));
+            $id_user_received = (int)$sql->id_user;
             $user_id_received = strtoupper(trim($sql->user_id));
+            $divisi_received = strtoupper(trim($sql->divisi));
             $fcm_id_device = trim($sql->fcm_id);
             $registration_id = array($fcm_id_device);
 
-            DB::connection($request->get('divisi'))->transaction(function () use ($request, $sql) {
-                DB::connection($request->get('divisi'))->insert("exec SP_Notification_Simpan ?,?,?,?,?,?,?,?", [
-                    strtoupper(trim($sql->user_id)), trim($sql->email), trim($request->get('title')),
-                    trim($request->get('message')), trim($request->get('type')), trim($request->get('code')),
-                    strtoupper(trim($sql->companyid)), strtoupper(trim($request->get('user_process')))
-                ]);
-            });
+            if(strtoupper(trim($request->get('type'))) == 'POF') {
+                $kode_notification = strtoupper(trim($request->get('code')));
+            } elseif(strtoupper(trim($request->get('type'))) == 'CAMPAIGN') {
+                $kode_notification = strtoupper(trim($request->get('code')));
+            } else {
+                $kode_notification = trim(trim($id_user_received).'NOTIF'.date('YmdHis'));
+            }
 
             $data_content = [];
             // ========================================================================================================
@@ -319,7 +332,19 @@ class NotificationController extends Controller
                         ->where('pof.no_pof', strtoupper(trim($request->get('code'))))
                         ->first();
 
-                if(!empty($sql->nomor_pof)) {
+                if(empty($sql->nomor_pof)) {
+                    $data_content = [
+                        'nomor_pof'     => strtoupper(trim($request->get('code'))),
+                        'tanggal'       => '-',
+                        'sales_code'    => '-',
+                        'sales_name'    => '-',
+                        'dealer_code'   => '-',
+                        'dealer_name'   => '-',
+                        'approve'       => 0,
+                        'total'         => 0,
+                        'order_code'    => strtoupper(trim($request->get('code'))),
+                    ];
+                } else {
                     $data_content = [
                         'nomor_pof'     => strtoupper(trim($sql->nomor_pof)),
                         'tanggal'       => trim($sql->tanggal),
@@ -337,13 +362,24 @@ class NotificationController extends Controller
                         ->selectRaw("isnull(substring(camp.no_camp, 3, 3), 0) as id,
                                     isnull(camp.no_camp, '') as nomor_campaign,
                                     isnull(camp.nm_camp, '') as nama_campaign,
-                                    isnull(camp.tgl_prd1, '') as tanggal_awal,
-                                    isnull(camp.tgl_prd2, '') as tanggal_akhir,
+                                    format(cast(convert(varchar(10), isnull(camp.tgl_prd1, ''), 120) as date), 'dd MMMM yyyy') as tanggal_awal,
+                                    format(cast(convert(varchar(10), isnull(camp.tgl_prd2, ''), 120) as date), 'dd MMMM yyyy') as tanggal_akhir,
                                     isnull(camp.picture, '') as picture")
                         ->where('camp.no_camp', strtoupper(trim($request->get('code'))))
                         ->first();
 
-                if(!empty($sql->nomor_campaign)) {
+                if(empty($sql->nomor_campaign)) {
+                    $data_content = [
+                        'id'            => 0,
+                        'title'         => '-',
+                        'photo'         => '-',
+                        'promo_start'   => '-',
+                        'promo_end'     => '-',
+                        'content'       => '-',
+                        'note'          => '-',
+                        'code'          => ''
+                    ];
+                } else {
                     $data_content = [
                         'id'            => (int)$sql->id,
                         'title'         => strtoupper(trim($sql->nama_campaign)),
@@ -370,19 +406,53 @@ class NotificationController extends Controller
                         ->orderBy('notification.id', 'desc')
                         ->first();
 
-                if(!empty($sql->id)) {
+                if(empty($sql->id)) {
                     $data_content = [
-                        'id'        => (int)$sql->id,
                         'tanggal'   => trim($sql->tanggal).' • '.trim($sql->jam),
                         'type'      => strtoupper(trim($sql->type)),
                         'notice'    => trim($sql->notice),
                         'message'   => trim($sql->message)
+                    ];
+                } else {
+                    $data_content = [
+                        'tanggal'   => '-',
+                        'type'      => '-',
+                        'notice'    => '-',
+                        'message'   => '-'
                     ];
                 }
             }
             // ========================================================================================================
             // END GET DATA DETAIL CONTENT
             // ========================================================================================================
+
+
+            // ========================================================================================================
+            // INSERT DATA KE FIREBASE
+            // ========================================================================================================
+            $data_notification = [
+                'kode'      => strtoupper(trim($kode_notification)),
+                'tanggal'   => date('Y-m-d').' • '.date('H:i:s'),
+                'email'     => trim($request->get('email')),
+                'notice'    => trim($request->get('title')),
+                'message'   => trim($request->get('message')),
+                'type'      => strtoupper(trim($request->get('type'))),
+                'code'      => strtoupper(trim($request->get('code'))),
+                'is_read'   => false,
+                'user_id'   => strtoupper(trim($user_id_received)),
+                strtolower(trim($request->get('type'))) => $data_content,
+            ];
+
+            $this->database
+                ->getReference('notification/sumaandroid/'.
+                                strtolower(trim($divisi_received)).'/'.
+                                strtoupper(trim($id_user_received)).'/'.
+                                strtoupper(trim($kode_notification)))
+                ->set($data_notification);
+            // ========================================================================================================
+            // END INSERT DATA KE FIREBASE
+            // ========================================================================================================
+
             $message = [
                 'title'     		=> trim($request->get('title')),
                 'type'     			=> trim($request->get('type')),

@@ -142,7 +142,7 @@ class AuthController extends Controller {
                             isnull(rtrim(users.photo), '') as photo, isnull(rtrim(users.name), '') as name,
                             isnull(rtrim(users.telepon), '') as phone_number, isnull(rtrim(users.email), '') as email,
                             isnull(rtrim(users.companyid), '') as company, isnull(company.inisial, 0) as kantor_pusat,
-                            '".strtoupper(trim($divisiId))."' as divisi
+                            isnull(users.id, 0) as id_user, '".strtoupper(trim($divisiId))."' as divisi
                     from
                     (
                         select	top 1 id, session_id, user_id, user_agent, ip
