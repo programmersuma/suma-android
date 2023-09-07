@@ -58,14 +58,14 @@ class CheckToken
 
                 DB::connection($request->get('divisi'))
                     ->update('update  user_api_tokens
-                            set     date_expired=?, expired_at=?
-                            where   token=?', [
+                              set     date_expired=?, expired_at=?
+                              where   token=?', [
                         $date_expired, $time_expired, $access_token
                     ]);
             }
 
             if (Request::is('api/auth/login')) {
-                $request->merge(['userlogin' => [
+                $request->merge(['userlogin' => (object)[
                     'id'            => (int)$sql->id,
                     'user_id'       => strtoupper(trim($sql->user_id)),
                     'role_id'       => strtoupper(trim($sql->role_id)),
@@ -76,7 +76,7 @@ class CheckToken
                 if (empty($sql->user_id) || trim($sql->user_id) == '') {
                     return ApiResponse::responseWarning('Anda belum login, lakukan login ulang');
                 }
-                $request->merge(['userlogin' => [
+                $request->merge(['userlogin' => (object)[
                     'id'            => (int)$sql->id,
                     'token'         => trim($sql->token),
                     'session_id'    => trim($sql->session_id),
