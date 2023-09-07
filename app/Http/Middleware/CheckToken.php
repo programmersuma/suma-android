@@ -76,7 +76,7 @@ class CheckToken
                 if (empty($sql->user_id) || trim($sql->user_id) == '') {
                     return ApiResponse::responseWarning('Anda belum login, lakukan login ulang');
                 }
-                $request->merge(['userlogin' => (object)[
+                $request->merge(['userlogin' => [
                     'id'            => (int)$sql->id,
                     'token'         => trim($sql->token),
                     'session_id'    => trim($sql->session_id),
