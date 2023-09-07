@@ -65,18 +65,19 @@ class CheckToken
             }
 
             if (Request::is('api/auth/login')) {
-                $request->merge(['userlogin' => (object)[
+                $user_login = (object)[
                     'id'            => (int)$sql->id,
                     'user_id'       => strtoupper(trim($sql->user_id)),
                     'role_id'       => strtoupper(trim($sql->role_id)),
                     'email'         => trim($sql->email),
                     'companyid'     => strtoupper(trim($sql->companyid)),
-                ]]);
+                ];
+                $request->merge(['userlogin' => $user_login]);
             } else {
                 if (empty($sql->user_id) || trim($sql->user_id) == '') {
                     return ApiResponse::responseWarning('Anda belum login, lakukan login ulang');
                 }
-                $request->merge(['userlogin' => (object)[
+                $user_login = (object)[
                     'id'            => (int)$sql->id,
                     'token'         => trim($sql->token),
                     'session_id'    => trim($sql->session_id),
@@ -85,7 +86,8 @@ class CheckToken
                     'email'         => trim($sql->email),
                     'fcm_id'        => trim($sql->fcm_id),
                     'companyid'     => strtoupper(trim($sql->companyid)),
-                ]]);
+                ];
+                $request->merge(['userlogin' => $user_login]);
             }
 
 
