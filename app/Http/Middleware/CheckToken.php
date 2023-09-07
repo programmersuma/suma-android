@@ -58,8 +58,8 @@ class CheckToken
 
                 DB::connection($request->get('divisi'))
                     ->update('update  user_api_tokens
-                            set     date_expired=?, expired_at=?
-                            where   token=?', [
+                              set     date_expired=?, expired_at=?
+                              where   token=?', [
                                 $date_expired, $time_expired, $access_token
                             ]);
             }
