@@ -195,44 +195,110 @@ class NotificationController extends Controller
 
             foreach($data_notification as $data) {
                 if(strtoupper(trim($data->type)) == 'POF') {
-                    $data_result_notification[] = [
-                        'id'        => (int)$data->id,
-                        'tanggal'   => trim($data->tanggal),
-                        'email'     => trim($data->email),
-                        'notice'    => trim($data->notice),
-                        'message'   => trim($data->message),
-                        'type'      => strtoupper(trim($data->type)),
-                        'code'      => strtoupper(trim($data->code)),
-                        'pof'       => $data_pof
-                                        ->where('nomor_pof', strtoupper(trim($data->code)))
-                                        ->first()
-                    ];
+                    if(!empty($data_pof->where('nomor_pof', strtoupper(trim($data->code)))->first())) {
+                        $data_result_notification[] = [
+                            'id'        => (int)$data->id,
+                            'tanggal'   => trim($data->tanggal),
+                            'email'     => trim($data->email),
+                            'notice'    => trim($data->notice),
+                            'message'   => trim($data->message),
+                            'type'      => strtoupper(trim($data->type)),
+                            'code'      => strtoupper(trim($data->code)),
+                            'pof'       => $data_pof
+                                            ->where('nomor_pof', strtoupper(trim($data->code)))
+                                            ->first()
+                        ];
+                    } else {
+                        $data_result_notification[] = [
+                            'id'        => (int)$data->id,
+                            'tanggal'   => trim($data->tanggal),
+                            'email'     => trim($data->email),
+                            'notice'    => trim($data->notice),
+                            'message'   => trim($data->message),
+                            'type'      => strtoupper(trim($data->type)),
+                            'code'      => strtoupper(trim($data->code)),
+                            'pof'       => [
+                                'nomor_pof'     => strtoupper(trim($data->code)),
+                                'tanggal'       => '-',
+                                'sales_code'    => '-',
+                                'sales_name'    => '-',
+                                'dealer_code'   => '-',
+                                'dealer_name'   => '-',
+                                'approve'       => 0,
+                                'total'         => 0,
+                                'order_code'    => strtoupper(trim($data->code))
+                            ]
+                        ];
+                    }
+
                 } elseif(strtoupper(trim($data->type)) == 'CAMPAIGN') {
-                    $data_result_notification[] = [
-                        'id'        => (int)$data->id,
-                        'tanggal'   => trim($data->tanggal),
-                        'email'     => trim($data->email),
-                        'notice'    => trim($data->notice),
-                        'message'   => trim($data->message),
-                        'type'      => strtoupper(trim($data->type)),
-                        'code'      => strtoupper(trim($data->code)),
-                        'campaign'  => $data_campaign
-                                        ->where('code', strtoupper(trim($data->code)))
-                                        ->first()
-                    ];
+                    if(!empty($data_campaign->where('code', strtoupper(trim($data->code)))->first())) {
+                        $data_result_notification[] = [
+                            'id'        => (int)$data->id,
+                            'tanggal'   => trim($data->tanggal),
+                            'email'     => trim($data->email),
+                            'notice'    => trim($data->notice),
+                            'message'   => trim($data->message),
+                            'type'      => strtoupper(trim($data->type)),
+                            'code'      => strtoupper(trim($data->code)),
+                            'campaign'  => $data_campaign
+                                            ->where('code', strtoupper(trim($data->code)))
+                                            ->first()
+                        ];
+                    } else {
+                        $data_result_notification[] = [
+                            'id'        => (int)$data->id,
+                            'tanggal'   => trim($data->tanggal),
+                            'email'     => trim($data->email),
+                            'notice'    => trim($data->notice),
+                            'message'   => trim($data->message),
+                            'type'      => strtoupper(trim($data->type)),
+                            'code'      => strtoupper(trim($data->code)),
+                            'campaign'  => [
+                                'id'            => 0,
+                                'title'         => '-',
+                                'photo'         => 'https://suma-honda.id/assets/images/logo/bg_logo_suma.png',
+                                'promo_start'   => '-',
+                                'promo_end'     => '-',
+                                'content'       => '-',
+                                'note'          => '-',
+                                'code'          => '-'
+                            ]
+                        ];
+                    }
+
                 } elseif(strtoupper(trim($data->type)) == 'INFORMATION') {
-                    $data_result_notification[] = [
-                        'id'        => (int)$data->id,
-                        'tanggal'   => trim($data->tanggal),
-                        'email'     => trim($data->email),
-                        'notice'    => trim($data->notice),
-                        'message'   => trim($data->message),
-                        'type'      => strtoupper(trim($data->type)),
-                        'code'      => strtoupper(trim($data->code)),
-                        'information' => $data_information
-                                        ->where('id', strtoupper(trim($data->id)))
-                                        ->first()
-                    ];
+                    if(!empty($data_information->where('id', strtoupper(trim($data->id)))->first())) {
+                        $data_result_notification[] = [
+                            'id'        => (int)$data->id,
+                            'tanggal'   => trim($data->tanggal),
+                            'email'     => trim($data->email),
+                            'notice'    => trim($data->notice),
+                            'message'   => trim($data->message),
+                            'type'      => strtoupper(trim($data->type)),
+                            'code'      => strtoupper(trim($data->code)),
+                            'information' => $data_information
+                                            ->where('id', strtoupper(trim($data->id)))
+                                            ->first()
+                        ];
+                    } else {
+                        $data_result_notification[] = [
+                            'id'        => (int)$data->id,
+                            'tanggal'   => trim($data->tanggal),
+                            'email'     => trim($data->email),
+                            'notice'    => trim($data->notice),
+                            'message'   => trim($data->message),
+                            'type'      => strtoupper(trim($data->type)),
+                            'code'      => strtoupper(trim($data->code)),
+                            'information' => [
+                                'id'        => 0,
+                                'tanggal'   => '-',
+                                'type'      => '-',
+                                'notice'    => '-',
+                                'message'   => '-'
+                            ]
+                        ];
+                    }
                 }
             }
 
@@ -299,7 +365,7 @@ class NotificationController extends Controller
             $companyid_received = strtoupper(trim($sql->companyid));
             $id_user_received = (int)$sql->id_user;
             $user_id_received = strtoupper(trim($sql->user_id));
-            $divisi_received = strtoupper(trim($sql->divisi));
+            $user_email_received = trim($sql->email);
             $fcm_id_device = trim($sql->fcm_id);
             $registration_id = array($fcm_id_device);
 
@@ -310,6 +376,17 @@ class NotificationController extends Controller
             } else {
                 $kode_notification = trim(trim($id_user_received).'NOTIF'.date('YmdHis'));
             }
+
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_notification, $user_id_received,
+                                                                        $user_email_received, $companyid_received) {
+                DB::connection($request->get('divisi'))
+                    ->insert('exec SP_Notification_Simpan ?,?,?,?,?,?,?,?,?', [
+                        strtoupper(trim($kode_notification)), strtoupper(trim($user_id_received)), trim($user_email_received),
+                        trim($request->get('title')), trim($request->get('message')), trim($request->get('type')),
+                        strtoupper(trim($request->get('code'))), strtoupper(trim($companyid_received)),
+                        strtoupper(trim($request->get('user_process')))
+                    ]);
+            });
 
             $data_content = [];
             // ========================================================================================================
@@ -424,33 +501,6 @@ class NotificationController extends Controller
             }
             // ========================================================================================================
             // END GET DATA DETAIL CONTENT
-            // ========================================================================================================
-
-
-            // ========================================================================================================
-            // INSERT DATA KE FIREBASE
-            // ========================================================================================================
-            $data_notification = [
-                'kode'      => strtoupper(trim($kode_notification)),
-                'tanggal'   => date('Y-m-d').' • '.date('H:i:s'),
-                'email'     => trim($request->get('email')),
-                'notice'    => trim($request->get('title')),
-                'message'   => trim($request->get('message')),
-                'type'      => strtoupper(trim($request->get('type'))),
-                'code'      => strtoupper(trim($request->get('code'))),
-                'is_read'   => false,
-                'user_id'   => strtoupper(trim($user_id_received)),
-                strtolower(trim($request->get('type'))) => $data_content,
-            ];
-
-            $this->database
-                ->getReference('notification/sumaandroid/'.
-                                strtolower(trim($divisi_received)).'/'.
-                                strtoupper(trim($id_user_received)).'/'.
-                                strtoupper(trim($kode_notification)))
-                ->set($data_notification);
-            // ========================================================================================================
-            // END INSERT DATA KE FIREBASE
             // ========================================================================================================
 
             $message = [
