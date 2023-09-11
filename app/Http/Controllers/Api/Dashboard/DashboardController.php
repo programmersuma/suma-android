@@ -37,7 +37,7 @@ class DashboardController extends Controller
                 return ApiResponse::responseWarning('Kode supervisor anda tidak ditemukan, hubungi IT Programmer');
             }
 
-            $kode_mkr = strtoupper(trim($kode_mkr));
+            $kode_mkr = strtoupper(trim($sql->kode_spv));
         }
 
         if(strtoupper(trim($request->get('category'))) == 'SALESMAN') {
@@ -56,7 +56,6 @@ class DashboardController extends Controller
                         strtoupper(trim($request->userlogin->user_id)),
                         strtoupper(trim($request->userlogin->companyid)));
             }
-
         } elseif (strtoupper(trim($request->get('category'))) == 'DEALER') {
             $validate = Validator::make($request->all(), [
                 'ms_dealer_id' => 'required|string'
