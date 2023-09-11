@@ -411,7 +411,7 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Pilih atau isi divisi, dealer Id, part Id, dan jumlah quantity terlebih dahulu');
             }
 
-            if((double)$request->get('quantity') <= 0) {
+            if((double)str_replace(',','.',$request->get('quantity')) <= 0) {
                 return ApiResponse::responseWarning('Jumlah order harus lebih besar dari nol (0)');
             }
 
@@ -445,8 +445,8 @@ class CartController extends Controller {
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
                 DB::connection($request->get('divisi'))->insert("exec SP_CartDtlTmp_UpdateQty1 ?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($part_number)),
-                    (double)$request->get('quantity'), strtoupper(trim($user_id)),
-                    strtoupper(trim(trim($companyid))),
+                    (double)str_replace(',','.',$request->get('quantity')),
+                    strtoupper(trim($user_id)), strtoupper(trim(trim($companyid))),
                 ]);
             });
 
@@ -536,12 +536,12 @@ class CartController extends Controller {
             }
 
             if((int)$status_cek_hpp == 1) {
-                if((double)$harga_pokok > (double)$request->get('harga')) {
+                if((double)$harga_pokok > (double)str_replace(',','.',$request->get('harga'))) {
                     return ApiResponse::responseWarning('Penjualan Rugi, Harga yang anda entry tidak boleh lebih rendah dari yang telah ditentukan');
                 }
             }
 
-            if ((double)$harga_netto > (double)$request->get('harga')) {
+            if ((double)$harga_netto > (double)str_replace(',','.',$request->get('harga'))) {
                 if((double)$harga_netto > 0) {
                     return ApiResponse::responseWarning('Penjualan Rugi, Harga yang anda entry lebih rendah dari harga netto terendah');
                 }
@@ -550,9 +550,8 @@ class CartController extends Controller {
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
                 DB::connection($request->get('divisi'))->insert("exec SP_CartDtlTmp_UpdateHarga1 ?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($part_number)),
-                    (double)$request->get('harga'), strtoupper(trim($user_id)),
-                    strtoupper(trim($companyid)),
-
+                    (double)str_replace(',','.',$request->get('harga')),
+                    strtoupper(trim($user_id)), strtoupper(trim($companyid)),
                 ]);
             });
 
@@ -618,8 +617,8 @@ class CartController extends Controller {
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number, $user_id, $companyid) {
                 DB::connection($request->get('divisi'))->insert("exec SP_CartDtlTmp_UpdateDiscDetail1 ?,?,?,?,?", [
                     strtoupper(trim($kode_dealer)), strtoupper(trim($part_number)),
-                    (float)$request->get('discount'), strtoupper(trim($user_id)),
-                    strtoupper(trim($companyid))
+                    (float)str_replace(',','.',$request->get('discount')),
+                    strtoupper(trim($user_id)), strtoupper(trim($companyid))
                 ]);
             });
 
@@ -673,7 +672,7 @@ class CartController extends Controller {
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $user_id, $companyid) {
                 DB::connection($request->get('divisi'))->update("exec SP_CartTmp_UpdateDiscount ?,?,?,?", [
-                    strtoupper(trim($kode_dealer)), (float)$request->get('discount'),
+                    strtoupper(trim($kode_dealer)), (float)str_replace(',','.',$request->get('discount')),
                     strtoupper(trim($user_id)), strtoupper(trim($companyid))
                 ]);
             });

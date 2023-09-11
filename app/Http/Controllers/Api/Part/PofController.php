@@ -736,7 +736,7 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_Pof_UpdateDiscount ?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))),
-                    (double)$request->get('discount'),
+                    (double)str_replace(',','.',$request->get('discount')),
                     strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
@@ -844,12 +844,12 @@ class PofController extends Controller
             }
 
             if((int)$sql->status_cek_hpp == 1) {
-                if((double)$sql->harga_pokok > (double)$request->get('harga')) {
+                if((double)$sql->harga_pokok > (double)str_replace(',','.',$request->get('harga'))) {
                     return ApiResponse::responseWarning('Penjualan Rugi, Harga yang anda entry tidak boleh lebih rendah dari yang telah ditentukan');
                 }
             }
 
-            if ((double)$sql->harga_netto > (double)$request->get('harga')) {
+            if ((double)$sql->harga_netto > (double)str_replace(',','.',$request->get('harga'))) {
                 if((double)$sql->harga_netto > 0) {
                     return ApiResponse::responseWarning('Penjualan Rugi, Harga yang anda entry lebih rendah dari harga netto terendah');
                 }
@@ -858,7 +858,7 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateHarga ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)$request->get('harga'), strtoupper(trim($request->userlogin->user_id)),
+                    (double)str_replace(',','.',$request->get('harga')), strtoupper(trim($request->userlogin->user_id)),
                     strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
@@ -906,7 +906,7 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateJmlOrder ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)$request->get('quantity'), strtoupper(trim($request->userlogin->user_id)),
+                    (double)str_replace(',','.',$request->get('quantity')), strtoupper(trim($request->userlogin->user_id)),
                     strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
@@ -959,7 +959,7 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateDiscDetail ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)$request->get('discount'), strtoupper(trim($request->userlogin->user_id)),
+                    (double)str_replace(',','.',$request->get('discount')), strtoupper(trim($request->userlogin->user_id)),
                     strtoupper(trim($request->userlogin->companyid))
                 ]);
             });
