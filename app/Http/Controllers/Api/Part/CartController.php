@@ -604,6 +604,12 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Kode TPC cart anda adalah TPC 20. Kode TPC 20 tidak boleh mengganti harga');
             }
 
+            if(trim($request->get('divisi')) == 'sqlsrv_honda') {
+                if((float)str_replace(',','.',$request->get('discount')) > 19.00) {
+                    return ApiResponse::responseWarning('Discount maksimal hanya bisa dientry 19.00, selebihnya hubungi Manager Marketing');
+                }
+            }
+
             $sql = DB::connection($request->get('divisi'))->table('mspart')->lock('with (nolock)')
                     ->selectRaw("isnull(mspart.kd_part, '') as part_number")
                     ->where('mspart.id', $request->get('id_part_cart'))
@@ -668,6 +674,12 @@ class CartController extends Controller {
 
             if(trim($sql->kode_tpc) == '20') {
                 return ApiResponse::responseWarning('Kode TPC cart anda adalah TPC 20. Kode TPC 20 tidak boleh mengganti harga');
+            }
+
+            if(trim($request->get('divisi')) == 'sqlsrv_honda') {
+                if((float)str_replace(',','.',$request->get('discount')) > 19.00) {
+                    return ApiResponse::responseWarning('Discount maksimal hanya bisa dientry 19.00, selebihnya hubungi Manager Marketing');
+                }
             }
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $user_id, $companyid) {

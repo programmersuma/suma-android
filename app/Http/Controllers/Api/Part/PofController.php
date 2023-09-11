@@ -733,6 +733,12 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('POF yang sudah di approve tidak bisa di edit');
             }
 
+            if(trim($request->get('divisi')) == 'sqlsrv_honda') {
+                if((float)str_replace(',','.',$request->get('discount')) > 19.00) {
+                    return ApiResponse::responseWarning('Discount maksimal hanya bisa dientry 19.00, selebihnya hubungi Manager Marketing');
+                }
+            }
+
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_Pof_UpdateDiscount ?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))),
@@ -954,6 +960,12 @@ class PofController extends Controller
 
             if(trim($sql->kode_tpc) == '20') {
                 return ApiResponse::responseWarning('TPC nomor pof '.strtoupper(trim($request->get('nomor_pof'))).' adalah TPC 20. Kode TPC 20 tidak boleh mengganti diskon');
+            }
+
+            if(trim($request->get('divisi')) == 'sqlsrv_honda') {
+                if((float)str_replace(',','.',$request->get('discount')) > 19.00) {
+                    return ApiResponse::responseWarning('Discount maksimal hanya bisa dientry 19.00, selebihnya hubungi Manager Marketing');
+                }
             }
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
