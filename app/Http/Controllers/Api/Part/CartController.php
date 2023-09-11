@@ -895,7 +895,16 @@ class CartController extends Controller {
             }
 
             $nomor_pof = strtoupper(trim($sql->nomor_pof));
+            $kode_sales = strtoupper(trim($sql->kode_sales));
+            $nama_sales = strtoupper(trim($sql->nama_sales));
+            $kode_dealer = strtoupper(trim($sql->kode_dealer));
+            $nama_dealer = strtoupper(trim($sql->nama_dealer));
+            $tanggal_akhir_pof = strtoupper(trim($sql->tanggal_akhir_pof));
+            $status_bo = (strtoupper(trim($sql->status_bo)) == 'B') ? 'BACK ORDER' : 'TIDAK BO';
+            $jumlah_item = (double)$sql->jumlah_item;
+            $total = (double)$sql->total;
             $kode_supervisor = strtoupper(trim($sql->kode_supervisor));
+
             // =======================================================================================================
             // Notification - Supervisor
             // =======================================================================================================
@@ -935,15 +944,14 @@ class CartController extends Controller {
             // =======================================================================================================
             //
             // =======================================================================================================
-
             $data = [
-                'code_order'    => strtoupper(trim($sql->nomor_pof)),
-                'salesman'      => strtoupper(trim($sql->kode_sales)).' - '.strtoupper(trim($sql->nama_sales)),
-                'dealer'        => strtoupper(trim($sql->kode_dealer)).' - '.strtoupper(trim($sql->nama_dealer)),
-                'umur_faktur'   => trim($sql->tanggal_akhir_pof),
-                'status_bo'     => (strtoupper(trim($sql->status_bo)) == 'B') ? 'BACK ORDER' : 'TIDAK BO',
-                'jumlah_item'   => (double)$sql->jumlah_item,
-                'grand_total'   => (double)$sql->total
+                'code_order'    => strtoupper(trim($nomor_pof)),
+                'salesman'      => strtoupper(trim($kode_sales)).' - '.strtoupper(trim($nama_sales)),
+                'dealer'        => strtoupper(trim($kode_dealer)).' - '.strtoupper(trim($nama_dealer)),
+                'umur_faktur'   => trim($tanggal_akhir_pof),
+                'status_bo'     => strtoupper(trim($status_bo)),
+                'jumlah_item'   => (double)$jumlah_item,
+                'grand_total'   => (double)$total
             ];
 
             return ApiResponse::responseSuccess('success', $data);
