@@ -84,7 +84,7 @@ class CatalogController extends Controller {
                     'id'    => $data->id_detail,
                     'name'  => trim($data->name_file),
                     'size'  => trim($data->size_file),
-                    'detail'=> trim($data->url_file)
+                    'url'   => trim($data->url_file)
                 ]);
             }
 
