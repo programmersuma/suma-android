@@ -59,8 +59,11 @@ class TrackingController extends Controller {
             // GET NOMOR FAKTUR TRACKING ORDER
             // ===================================================================
             $sql = DB::connection($request->get('divisi'))->table('faktur')->lock('with (nolock)')
-                    ->selectRaw("isnull(faktur.no_faktur, '') as nomor_faktur");
-
+                    ->selectRaw("isnull(faktur.no_faktur, '') as nomor_faktur")
+                    ->leftJoin(DB::raw('salesman with (nolock)'), function($join) {
+                        $join->on('salesman.kd_sales', '=', 'faktur.kd_sales')
+                            ->on('salesman.companyid', '=', 'faktur.companyid');
+                    });
             if(!empty($request->get('part_number')) && trim($request->get('part_number')) != '') {
                 $sql->leftJoin(DB::raw('fakt_dtl with (nolock)'), function($join) {
                     $join->on('fakt_dtl.no_faktur', '=', 'faktur.no_faktur')

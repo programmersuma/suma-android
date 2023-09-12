@@ -33,18 +33,18 @@ class CatalogController extends Controller {
 
             foreach($sql as $data) {
                 $parts_catalog->push((object) [
-                    'id'    => (int)$data->id,
-                    'name'  => trim($data->name),
-                    'icon'  => trim($data->icon),
-                    'detail'=> trim($data->detail)
+                    'id'        => $data->id,
+                    'name'      => trim($data->name),
+                    'icon'      => trim($data->icon),
+                    'detail'    => trim($data->detail)
                 ]);
             }
 
             $sql = DB::connection($request->get('divisi'))
                     ->table('catalog')->lock('with (nolock)')
-                    ->selectRaw("isnull(catalog.id, 0) as id_catalog, isnull(catalog.name, '') as name_catalog,
+                    ->selectRaw("isnull(catalog.id, '') as id_catalog, isnull(catalog.name, '') as name_catalog,
                                 isnull(catalog.icon, '') as icon_catalog, isnull(catalog.list, 0) as list_catalog,
-                                isnull(catalog_dtl.id_detail, 0) as id_detail, isnull(catalog_dtl.name, '') as name_detail,
+                                isnull(catalog_dtl.id_detail, '') as id_detail, isnull(catalog_dtl.name, '') as name_detail,
                                 isnull(catalog_dtl.url, '') as url_detail, isnull(catalog_dtl.size, 0) as size_detail,
                                 isnull(catalog_dtl_list.name, '') as name_file, isnull(catalog_dtl_list.url, '') as url_file,
                                 isnull(catalog_dtl_list.size, 0) as size_file")
@@ -62,25 +62,26 @@ class CatalogController extends Controller {
             $catalog_temp = new Collection();
             $catalog_detail_temp = new Collection();
             $catalog_file_temp = new Collection();
+
             foreach($sql as $data) {
                 $catalog_temp->push((object) [
-                    'id'    => (int)$data->id_catalog,
+                    'id'    => $data->id_catalog,
                     'name'  => trim($data->name_catalog),
                     'icon'  => trim($data->icon_catalog),
-                    'list'  => (int)$data->list_catalog,
+                    'list'  => $data->list_catalog,
                 ]);
 
                 $catalog_detail_temp->push((object) [
-                    'id_catalog'=> (int)$data->id_catalog,
-                    'id'    => (int)$data->id_detail,
+                    'id_catalog'=> $data->id_catalog,
+                    'id'    => $data->id_detail,
                     'name'  => trim($data->name_detail),
                     'url'   => trim($data->url_detail),
-                    'size'  => (int)$data->size_detail,
+                    'size'  => $data->size_detail,
                 ]);
 
                 $catalog_file_temp->push((object) [
-                    'id_catalog'=> (int)$data->id_catalog,
-                    'id'    => (int)$data->id_detail,
+                    'id_catalog'=> $data->id_catalog,
+                    'id'    => $data->id_detail,
                     'name'  => trim($data->name_file),
                     'size'  => trim($data->size_file),
                     'detail'=> trim($data->url_file)
@@ -90,34 +91,40 @@ class CatalogController extends Controller {
             $data_catalog = new Collection();
             $data_catalog_detail = new Collection();
             $catalog_id = '';
+            $catalog_detail_id = '';
 
             foreach($catalog_temp as $catalog) {
                 if((int)$catalog->id != (int)$catalog_id) {
-                    $detail = $catalog_detail_temp
+                    $catalog_list = $catalog_detail_temp
                                 ->where('id_catalog', (int)$catalog->id)
                                 ->values()
                                 ->all();
 
-                    foreach($detail as $dtl) {
-                        if((int)$catalog->list == 1) {
-                            $data_catalog_detail->push((object) [
-                                'id_catalog'    => (int)$dtl->id_catalog,
-                                'id'            => (int)$dtl->id,
-                                'name'          => trim($dtl->name),
-                                'detail'        => $catalog_file_temp
-                                                    ->where('id_catalog', (int)$catalog->id)
-                                                    ->where('id', (int)$dtl->id)
-                                                    ->values()
-                                                    ->all()
-                            ]);
-                        } else {
-                            $data_catalog_detail->push((object) [
-                                'id_catalog'    => (int)$dtl->id_catalog,
-                                'id'            => (int)$dtl->id,
-                                'name'          => trim($dtl->name),
-                                'url'           => trim($dtl->url),
-                                'size'          => (int)$dtl->size
-                            ]);
+                    foreach($catalog_list as $list_catalog) {
+                        if(strtoupper(trim($catalog_detail_id)) != strtoupper(trim($list_catalog->id))) {
+                            if((int)$catalog->list == 1) {
+                                $data_catalog_detail->push((object) [
+                                    'id_catalog'    => $list_catalog->id_catalog,
+                                    'id'            => $list_catalog->id,
+                                    'name'          => trim($list_catalog->name),
+                                    'detail'        => $catalog_file_temp
+                                                        ->where('id_catalog', (int)$catalog->id)
+                                                        ->where('id', $list_catalog->id)
+                                                        ->values()
+                                                        ->all()
+                                ]);
+
+                            } else {
+                                $data_catalog_detail->push((object) [
+                                    'id_catalog'    => (int)$list_catalog->id_catalog,
+                                    'id'            => (int)$list_catalog->id,
+                                    'name'          => trim($list_catalog->name),
+                                    'url'           => trim($list_catalog->url),
+                                    'size'          => (int)$list_catalog->size
+                                ]);
+                            }
+
+                            $catalog_detail_id = strtoupper(trim($list_catalog->id));
                         }
                     }
 
