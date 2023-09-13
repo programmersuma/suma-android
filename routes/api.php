@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\Tracking\TrackingController;
 Route::group(['middleware' => 'authBasic'], function() {
     Route::controller(AuthController::class)->group(function () {
         Route::post('oauth/token', 'oauthToken');
+        Route::post('auth/list-divisi', 'listDivisi');
         Route::post('auth/check-divisi', 'checkDivisi');
         Route::post('auth/forgot-password', 'forgotPassword');
         Route::post('auth/forgot-password-cek-status', 'forgotPasswordCekStatus');

@@ -49,7 +49,7 @@ class AuthController extends Controller {
         }
     }
 
-    protected function checkDivisi(Request $request) {
+    protected function listDivisi(Request $request) {
         try {
             $sql = "select	isnull(users.email, '') as email, isnull(users.user_id, '') as user_id,
                             isnull(users.companyid, '') as companyid,
@@ -61,16 +61,14 @@ class AuthController extends Controller {
                         from	dbhonda.dbo.users with (nolock)
                                     left join dbhonda.dbo.company with (nolock) on
                                                 users.companyid=dbhonda.dbo.company.companyid
-                        where	dbhonda.dbo.users.user_id='".$request->get('email')."' or
-                                dbhonda.dbo.users.email='".$request->get('email')."'
+                        where	dbhonda.dbo.users.email='".$request->get('email')."'
                         union	all
                         select	top 1 dbsuma.dbo.users.email, dbsuma.dbo.users.user_id,
                                 dbsuma.dbo.users.companyid, dbsuma.dbo.company.kd_file
                         from	dbsuma.dbo.users with (nolock)
                                     left join dbsuma.dbo.company with (nolock) on
                                                 users.companyid=dbsuma.dbo.company.companyid
-                        where	dbsuma.dbo.users.user_id='".$request->get('email')."' or
-                                dbsuma.dbo.users.email='".$request->get('email')."'
+                        where	dbsuma.dbo.users.email='".$request->get('email')."'
                     )	users";
 
             $result = DB::connection('sqlsrv_honda')->select($sql);
@@ -84,6 +82,41 @@ class AuthController extends Controller {
             }
 
             return ApiResponse::responseSuccess('success', $data_divisi);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
+
+    protected function checkDivisi(Request $request) {
+        try {
+            $sql = "select	isnull(users.email, '') as email, isnull(users.user_id, '') as user_id,
+                            isnull(users.companyid, '') as companyid,
+                            iif(isnull(ltrim(rtrim(upper(users.kd_file))), '')='A', 'HONDA', 'GENERAL') as divisi
+                    from
+                    (
+                        select	top 1 dbhonda.dbo.users.email, dbhonda.dbo.users.user_id,
+                                dbhonda.dbo.users.companyid, dbhonda.dbo.company.kd_file
+                        from	dbhonda.dbo.users with (nolock)
+                                    left join dbhonda.dbo.company with (nolock) on
+                                                users.companyid=dbhonda.dbo.company.companyid
+                        where	dbhonda.dbo.users.email='".$request->get('email')."'
+                        union	all
+                        select	top 1 dbsuma.dbo.users.email, dbsuma.dbo.users.user_id,
+                                dbsuma.dbo.users.companyid, dbsuma.dbo.company.kd_file
+                        from	dbsuma.dbo.users with (nolock)
+                                    left join dbsuma.dbo.company with (nolock) on
+                                                users.companyid=dbsuma.dbo.company.companyid
+                        where	dbsuma.dbo.users.email='".$request->get('email')."'
+                    )	users";
+
+            $result = DB::connection('sqlsrv_honda')->select($sql);
+
+            if(empty($result)) {
+                return ApiResponse::responseWarning('[Divisi] : Alamat email atau password salah');
+            } else {
+                return ApiResponse::responseSuccess('success', null);
+            }
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
@@ -105,7 +138,6 @@ class AuthController extends Controller {
             $sql = DB::connection($request->get('divisi'))
                     ->table('users')->lock('with (nolock)')
                     ->where('email', $request->get('email'))
-                    ->orWhere('user_id', $request->get('email'))
                     ->first();
 
             if(empty($sql->user_id)) {

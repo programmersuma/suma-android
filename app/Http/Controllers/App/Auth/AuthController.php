@@ -43,6 +43,22 @@ class AuthController extends Controller {
         }
     }
 
+    protected function listDivisi(Request $request) {
+        try {
+            $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
+            $url = 'auth/list-divisi';
+            $header = [ 'Authorization' => $credential ];
+            $body = [
+                'email'     => $request->get('email')
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
     protected function login(Request $request) {
         try {
             $url = 'auth/login';

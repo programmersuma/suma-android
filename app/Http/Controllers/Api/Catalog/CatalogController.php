@@ -72,19 +72,19 @@ class CatalogController extends Controller {
                 ]);
 
                 $catalog_detail_temp->push((object) [
-                    'id_catalog'=> $data->id_catalog,
-                    'id'    => $data->id_detail,
-                    'name'  => trim($data->name_detail),
-                    'url'   => trim($data->url_detail),
-                    'size'  => $data->size_detail,
+                    'id_catalog'    => $data->id_catalog,
+                    'id'            => $data->id_detail,
+                    'name'          => trim($data->name_detail),
+                    'url'           => trim($data->url_detail),
+                    'size'          => $data->size_detail,
                 ]);
 
                 $catalog_file_temp->push((object) [
-                    'id_catalog'=> $data->id_catalog,
-                    'id'    => $data->id_detail,
-                    'name'  => trim($data->name_file),
-                    'size'  => trim($data->size_file),
-                    'url'   => trim($data->url_file)
+                    'id_catalog'    => $data->id_catalog,
+                    'id'            => $data->id_detail,
+                    'name'          => trim($data->name_file),
+                    'size'          => trim($data->size_file),
+                    'url'           => trim($data->url_file)
                 ]);
             }
 
@@ -96,9 +96,9 @@ class CatalogController extends Controller {
             foreach($catalog_temp as $catalog) {
                 if((int)$catalog->id != (int)$catalog_id) {
                     $catalog_list = $catalog_detail_temp
-                                ->where('id_catalog', (int)$catalog->id)
-                                ->values()
-                                ->all();
+                                    ->where('id_catalog', (int)$catalog->id)
+                                    ->values()
+                                    ->all();
 
                     foreach($catalog_list as $list_catalog) {
                         if(strtoupper(trim($catalog_detail_id)) != strtoupper(trim($list_catalog->id))) {
@@ -113,7 +113,6 @@ class CatalogController extends Controller {
                                                         ->values()
                                                         ->all()
                                 ]);
-
                             } else {
                                 $data_catalog_detail->push((object) [
                                     'id_catalog'    => (int)$list_catalog->id_catalog,
@@ -129,14 +128,14 @@ class CatalogController extends Controller {
                     }
 
                     $data_catalog->push((object) [
-                        'id'    => (int)$catalog->id,
-                        'name'  => trim($catalog->name),
-                        'icon'  => trim($catalog->icon),
-                        'list'  => ((int)$catalog->list == 1) ? true : false,
-                        'detail'=> $data_catalog_detail
-                                    ->where('id_catalog', (int)$catalog->id)
-                                    ->values()
-                                    ->all()
+                        'id'        => (int)$catalog->id,
+                        'name'      => trim($catalog->name),
+                        'icon'      => trim($catalog->icon),
+                        'list'      => ((int)$catalog->list == 1) ? true : false,
+                        'detail'    => $data_catalog_detail
+                                        ->where('id_catalog', (int)$catalog->id)
+                                        ->values()
+                                        ->all()
                     ]);
 
                     $catalog_id = (int)$catalog->id;

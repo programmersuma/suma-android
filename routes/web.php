@@ -35,6 +35,7 @@ Route::get('/', function () {
 Route::controller(AuthController::class)->group(function () {
     Route::post('oauth/token', 'oauthToken');
     Route::post('auth/check-divisi', 'checkDivisi');
+    Route::post('auth/list-divisi', 'listDivisi');
 
     Route::post('auth/login', 'login');
     Route::post('auth/logout', 'logout');
