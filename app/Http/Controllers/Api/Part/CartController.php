@@ -134,7 +134,7 @@ class CartController extends Controller {
                                     round((((isnull(carttmp.harga, 0) -
                                         round(((isnull(carttmp.harga, 0) * isnull(carttmp.disc1, 0)) / 100), 0)) *
                                             isnull(carttmp.disc2, 0)) / 100), 0) as harga_netto_part,
-                            isnull(bo.jumlah, 0) as jumlah_bo
+                            isnull(bo.jumlah, 0) as jumlah_bo, isnull(carttmp.usertime, '') usertime
                     from
                     (
                         select	carttmp.companyid, carttmp.kd_key,
@@ -148,7 +148,8 @@ class CartController extends Controller {
                                 isnull(tbstlokasirak.stock, 0) -
                                     (isnull(stlokasi.min, 0) + isnull(stlokasi.in_transit, 0) +
                                         isnull(part.kanvas, 0) + isnull(part.min_gudang, 0) + isnull(part.in_transit, 0) +
-                                            isnull(part.konsinyasi, 0) + isnull(part.min_htl, 0)) as stock
+                                            isnull(part.konsinyasi, 0) + isnull(part.min_htl, 0)) as stock,
+                                cart_dtltmp.usertime
                         from
                         (
                             select	carttmp.companyid, carttmp.kd_key, carttmp.no_order,
@@ -186,7 +187,7 @@ class CartController extends Controller {
                                         '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer
                             left join discp with (nolock) on produk.kd_produk=discp.kd_produk and
                                         discp.cabang=iif(isnull(company.inisial, 0) = 1, 'RK', 'PC')
-                    order by carttmp.kd_part asc";
+                    order by carttmp.usertime desc, carttmp.kd_part asc";
 
             $result = DB::connection($request->get('divisi'))->select($sql);
 
