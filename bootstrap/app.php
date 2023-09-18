@@ -15,10 +15,7 @@ $app = new Illuminate\Foundation\Application(
     $_ENV['APP_BASE_PATH'] ?? dirname(__DIR__)
 );
 
-$app->configureMonologUsing(function($monolog) {
-    $nullLogger = new \Monolog\Handler\NullHandler();
-    $monolog->setHandlers(array($nullLogger));
-  });
+
 /*
 |--------------------------------------------------------------------------
 | Bind Important Interfaces
