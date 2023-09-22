@@ -380,11 +380,14 @@ class PofController extends Controller
 
                 $user_entry = strtoupper(trim($data->user_entry));
 
-                if((double)$data->disc_header > 0 && (double)$data->disc_detail > 0) {
-                    if(strtoupper(trim($data->kode_file)) == 'A') {
-                        return ApiResponse::responseWarning('Nomor pof tidak dapat di approve karena ada part number yang di discount 2x');
+                if(strtoupper(trim($data->kode_file)) == 'A') {
+                    if((double)$data->disc_header > 0) {
+                        if((double)$data->disc_detail > 0) {
+                            return ApiResponse::responseWarning('Nomor pof tidak dapat di approve karena ada part number yang di discount 2x');
+                        }
                     }
                 }
+                
 
                 if(trim($data->kode_tpc) == '14') {
                     if(trim($data->kode_dealer_disc_nol) == '') {
