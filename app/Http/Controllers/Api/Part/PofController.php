@@ -354,12 +354,14 @@ class PofController extends Controller
                             isnull(pof.kd_dealer_discnol, '') as kode_dealer_disc_nol,
                             isnull(pof.kd_tpc, '') as kode_tpc, isnull(pof_dtl.kd_part, '') as part_number,
                             isnull(pof.disc, 0) as disc_header, isnull(pof_dtl.disc1, 0) as disc_detail,
-                            isnull(pof.user_entry, '') as user_entry
+                            isnull(pof.user_entry, '') as user_entry, isnull(company.kd_file, '') as kode_file
                     from
                     (
                         select	top 1 pof.companyid, pof.no_pof, pof.kd_sales, pof.kd_dealer, pof.user_entry,
-                                pof.kd_tpc, pof.disc, faktur_discnol.kd_dealer as kd_dealer_discnol
+                                pof.kd_tpc, pof.disc, faktur_discnol.kd_dealer as kd_dealer_discnol,
+                                company.kd_file
                         from	pof with (nolock)
+                                    left join company with (nolock) on pof.companyid=company.companyid 
                                     left join faktur_discnol with (nolock) on pof.kd_dealer=faktur_discnol.kd_dealer and
                                                 pof.companyid=faktur_discnol.companyid
                         where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
@@ -377,6 +379,12 @@ class PofController extends Controller
                 $jumlah_data = (double)$jumlah_data + 1;
 
                 $user_entry = strtoupper(trim($data->user_entry));
+
+                if((double)$data->disc_header > 0 && (double)$data->disc_detail > 0) {
+                    if(strtoupper(trim($data->kode_file)) == 'A') {
+                        return ApiResponse::responseWarning('Nomor pof tidak dapat di approve karena ada part number yang di discount 2x');
+                    }
+                }
 
                 if(trim($data->kode_tpc) == '14') {
                     if(trim($data->kode_dealer_disc_nol) == '') {
