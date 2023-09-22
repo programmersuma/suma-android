@@ -27,11 +27,11 @@ class TrackingController extends Controller {
             /* ==================================================================== */
             /* Cek Role Id Supervisor */
             /* ==================================================================== */
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql = DB::connection($request->get('divisi'))->table('superspv')->lock('with (nolock)')
                         ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
-                        ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
+                        ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->first();
 
                 if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
@@ -44,7 +44,7 @@ class TrackingController extends Controller {
             $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -74,13 +74,13 @@ class TrackingController extends Controller {
             $sql->whereYear('faktur.tgl_faktur', $year)
                 ->whereMonth('faktur.tgl_faktur', $month)
                 ->where('faktur.kd_dealer', strtoupper($kode_dealer))
-                ->where('faktur.companyid', strtoupper(trim($request->userlogin->companyid)));
+                ->where('faktur.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
-            if(strtoupper(trim($request->userlogin->role_id)) == 'D_H3') {
-                $sql->where('faktur.kd_dealer', strtoupper(trim($request->userlogin->user_id)));
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_SM') {
-                $sql->where('faktur.kd_sales', strtoupper(trim($request->userlogin->user_id)));
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'D_H3') {
+                $sql->where('faktur.kd_dealer', strtoupper(trim($request->userlogin['user_id'])));
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+                $sql->where('faktur.kd_sales', strtoupper(trim($request->userlogin['user_id'])));
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql->where('salesman.spv', strtoupper(trim($kode_supervisor)));
             }
 
@@ -157,7 +157,7 @@ class TrackingController extends Controller {
                                     faktur.disc2, faktur.discrp, faktur.discrp1
                             from	faktur with (nolock)
                             where	faktur.no_faktur in (".$nomor_faktur_result.") and
-                                    faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                    faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                         )	faktur
                                 left join salesman with (nolock) on faktur.kd_sales=salesman.kd_sales and
                                             faktur.companyid=salesman.companyid
@@ -295,7 +295,7 @@ class TrackingController extends Controller {
                     ->whereMonth('faktur.tgl_faktur', trim($bulan))
                     ->where('faktur.kd_dealer', strtoupper(trim($dealer)))
                     ->where('fakt_dtl.kd_part', strtoupper(trim($part_number)))
-                    ->where('faktur.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('faktur.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderBy('faktur.no_faktur','asc')
                     ->paginate(10);
 
@@ -331,7 +331,7 @@ class TrackingController extends Controller {
                                         faktur.kd_dealer, faktur.disc2, faktur.discrp, faktur.discrp1
                                 from	faktur with (nolock)
                                 where	faktur.no_faktur in (".strtoupper(trim($nomor_faktur_result)).") and
-                                        faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                        faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                             )	faktur
                                     inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
                                                 faktur.companyid=fakt_dtl.companyid

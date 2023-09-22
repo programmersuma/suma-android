@@ -47,9 +47,9 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Data divisi, dealer Id, dan part Id tidak boleh kosong');
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $role_id = strtoupper(trim($request->userlogin->role_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $role_id = strtoupper(trim($request->userlogin['role_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))
                     ->table('msdealer')->lock('with (nolock)')
@@ -105,7 +105,7 @@ class CartController extends Controller {
                     ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -113,7 +113,7 @@ class CartController extends Controller {
             }
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
 
-            $sql = "select	'".trim($request->userlogin->id)."' as id, isnull(carttmp.no_order, '') as no_order,
+            $sql = "select	'".trim($request->userlogin['id'])."' as id, isnull(carttmp.no_order, '') as no_order,
                             isnull(company.kd_file, '') as kode_file, isnull(company.ppn, 0) as ppn,
                             isnull(carttmp.total, 0) as total_price, isnull(carttmp.kd_tpc, '14') as tpc_code,
                             isnull(carttmp.status, '') as status, isnull(carttmp.disc2, 0) as discount,
@@ -158,8 +158,8 @@ class CartController extends Controller {
                                     carttmp.disc2, carttmp.total, carttmp.status,
                                     carttmp.month_delivery
                             from	carttmp with (nolock)
-                            where	carttmp.kd_key='".strtoupper(trim($request->userlogin->user_id))."/".strtoupper(trim($kode_dealer))."' and
-                                    carttmp.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                            where	carttmp.kd_key='".strtoupper(trim($request->userlogin['user_id']))."/".strtoupper(trim($kode_dealer))."' and
+                                    carttmp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                         )	carttmp
                                 inner join company with (nolock) on carttmp.companyid=company.companyid
                                 inner join cart_dtltmp with (nolock) on carttmp.kd_key=cart_dtltmp.kd_key and
@@ -220,7 +220,7 @@ class CartController extends Controller {
                 if((double)$data->stock <= 0) {
                     $available_part = 'Not Available';
                 } else {
-                    if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_MGMT') {
+                    if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_MGMT') {
                         $available_part = 'Available';
                     } else {
                         $available_part = 'Available '.number_format($data->stock).' pcs';
@@ -232,7 +232,7 @@ class CartController extends Controller {
                 $notes_harga = '';
                 $notes_bo = '';
 
-                if(strtoupper(trim($request->userlogin->role_id)) != 'D_H3') {
+                if(strtoupper(trim($request->userlogin['role_id'])) != 'D_H3') {
                     if((double)$data->discount_produk > 0) {
                         if((double)$data->discount > (double)$data->discount_produk) {
                             $notes_diskon = '*) Disc Max Produk '.trim($data->item_group).' : '.number_format($data->discount_produk, 2).' %';
@@ -296,7 +296,7 @@ class CartController extends Controller {
                         'dealer_code'       => $dealer_code,
                         'dealer_name'       => $dealer_name,
                         'tpc_code'          => (int)$tpc_code,
-                        'users_id'          => (int)$request->userlogin->id,
+                        'users_id'          => (int)$request->userlogin['id'],
                         'total_price'       => $grand_total_price,
                         'sub_price'         => $total_sub_price,
                         'discount'          => $discount,
@@ -312,7 +312,7 @@ class CartController extends Controller {
                         'dealer_code'       => 0,
                         'dealer_name'       => "",
                         'tpc_code'          => 14,
-                        'users_id'          => (int)$request->userlogin->id,
+                        'users_id'          => (int)$request->userlogin['id'],
                         'total_price'       => 0,
                         'created_at'        => null,
                         'updated_at'        => null,
@@ -350,8 +350,8 @@ class CartController extends Controller {
                 }
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))
                     ->table('msdealer')->lock('with (nolock)')
@@ -416,8 +416,8 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Jumlah order harus lebih besar dari nol (0)');
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))
                     ->table('msdealer')->lock('with (nolock)')
@@ -471,8 +471,8 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Pilih divisi, dealer Id, part Id, dan nominal harga terlebih dahulu');
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
@@ -576,8 +576,8 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Pilih divisi, dealer Id, part Id, dan prosentase discount terlebih dahulu');
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
@@ -648,8 +648,8 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Pilih divisi, dealer Id, dan prosentase discount terlebih dahulu');
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
@@ -709,8 +709,8 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Pilih divisi, dealer Id, dan Part Id terlebih dahulu');
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))->table('mspart')->lock('with (nolock)')
                     ->selectRaw("isnull(mspart.kd_part, '') as part_number")
@@ -760,9 +760,9 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Data divisi, status BO, dan umur faktur tidak boleh kosong');
             }
 
-            $user_id = strtoupper(trim($request->userlogin->user_id));
-            $role_id = strtoupper(trim($request->userlogin->role_id));
-            $companyid = strtoupper(trim($request->userlogin->companyid));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $role_id = strtoupper(trim($request->userlogin['role_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
@@ -945,9 +945,9 @@ class CartController extends Controller {
                         'email'         => trim($sql->email),
                         'type'          => 'POF',
                         'title'         => 'New Order',
-                        'message'       => 'Ada purchase order form baru nomor '.strtoupper(trim($nomor_pof)).' dari user '.strtoupper(trim($request->userlogin->user_id)),
+                        'message'       => 'Ada purchase order form baru nomor '.strtoupper(trim($nomor_pof)).' dari user '.strtoupper(trim($request->userlogin['user_id'])),
                         'code'          => strtoupper(trim($nomor_pof)),
-                        'user_process'  => strtoupper(trim($request->userlogin->user_id)),
+                        'user_process'  => strtoupper(trim($request->userlogin['user_id'])),
                         'divisi'        => $request->get('divisi')
                     ];
                     ApiRequest::requestPost($url, $header, $body);

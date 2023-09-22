@@ -5,9 +5,11 @@ namespace App\Http\Middleware;
 use App\Helpers\ApiResponse;
 use Closure;
 use App\UserApiTokens;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
+use stdClass;
 
 class CheckToken
 {
@@ -72,7 +74,6 @@ class CheckToken
                     'email'         => trim($sql->email),
                     'companyid'     => strtoupper(trim($sql->companyid)),
                 ];
-                $request->merge(['userlogin' => (object)$user_login ]);
             } else {
                 if (empty($sql->user_id) || trim($sql->user_id) == '') {
                     return ApiResponse::responseWarning('Anda belum login, lakukan login ulang');
@@ -87,9 +88,9 @@ class CheckToken
                     'fcm_id'        => trim($sql->fcm_id),
                     'companyid'     => strtoupper(trim($sql->companyid)),
                 ];
-                $request->merge(['userlogin' => (object)$user_login ]);
             }
 
+            $request->merge(['userlogin' => $user_login ]);
 
             return $next($request);
         } catch (\Exception $exception) {

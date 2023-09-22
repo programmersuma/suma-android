@@ -29,12 +29,12 @@ class DealerController extends Controller {
             /* ==================================================================== */
             /* Cek Role Id Supervisor */
             /* ==================================================================== */
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql = DB::connection($request->get('divisi'))
                         ->table('superspv')->lock('with (nolock)')
                         ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
-                        ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
+                        ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->first();
 
                 if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
@@ -65,8 +65,8 @@ class DealerController extends Controller {
                         $join->on('dealer.kd_dealer', '=', 'dealer_fav.kd_dealer')
                             ->on('dealer.companyid', '=', 'dealer_fav.companyid');
                     })
-                    ->where('dealer_fav.user_id', strtoupper(trim($request->userlogin->user_id)))
-                    ->where('dealer_fav.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('dealer_fav.user_id', strtoupper(trim($request->userlogin['user_id'])))
+                    ->where('dealer_fav.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
             if(!empty($request->get('search')) && trim($request->get('search') != '')) {
                 $sql->where(function($query) use ($request) {
@@ -96,16 +96,16 @@ class DealerController extends Controller {
             $sql = DB::connection($request->get('divisi'))
                     ->table('dealer')->lock('with (nolock)')
                     ->selectRaw("isnull(dealer.kd_dealer, '') as kode_dealer")
-                    ->where('dealer.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('dealer.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql->leftJoin(DB::raw('salesman with (nolock)'), function($join) {
                     $join->on('salesman.kd_sales', '=', 'dealer.kd_sales')
                         ->on('salesman.companyid', '=', 'dealer.companyid');
                 });
                 $sql->where('salesman.spv', $kode_supervisor);
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_SM') {
-                $sql->where('dealer.kd_sales', strtoupper(trim($request->userlogin->user_id)));
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+                $sql->where('dealer.kd_sales', strtoupper(trim($request->userlogin['user_id'])));
             }
 
             if(!empty($request->get('search')) && trim($request->get('search') != '')) {
@@ -154,7 +154,7 @@ class DealerController extends Controller {
                                             msdealer.companyid=dealer.companyid
                         order by msdealer.kd_dealer asc";
 
-                $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin->companyid)) ]);
+                $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin['companyid'])) ]);
 
                 foreach($result as $data) {
                     $data_dealer[] = [
@@ -205,7 +205,7 @@ class DealerController extends Controller {
                                 isnull(competitor.photo, '') as photo,
                                 isnull(competitor.description, '') as description,
                                 isnull(competitor.usertime, '') as usertime")
-                    ->where('competitor.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('competitor.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderBy('competitor.usertime', 'desc')
                     ->paginate(10);
 
@@ -217,8 +217,8 @@ class DealerController extends Controller {
                 $data_competitor[] = [
                     'id'                        => (int)$result->id,
                     'code_dealer'               => strtoupper(trim($result->code_dealer)),
-                    'id_role'                   => strtoupper(trim($request->userlogin->role_id)),
-                    'id_user'                   => (int)$request->userlogin->id,
+                    'id_role'                   => strtoupper(trim($request->userlogin['role_id'])),
+                    'id_user'                   => (int)$request->userlogin['id'],
                     'name_competitor'           => strtoupper(trim($result->name_competitor)),
                     'product'                   => strtoupper(trim($result->product)),
                     'title_activity_competitor' => strtoupper(trim($result->title_activity_competitor)),
@@ -271,7 +271,7 @@ class DealerController extends Controller {
 
                 $convertImage = str_replace('data:image/png;base64,', '', $dataPhoto);
                 $file_image = str_replace(' ', '+', $convertImage);
-                $file_name = trim($request->userlogin->user_id).'-'.time().'-'.Str::random(10).'.'.'png';
+                $file_name = trim($request->userlogin['user_id']).'-'.time().'-'.Str::random(10).'.'.'png';
                 File::put(public_path('assets/images/competitor/') . $file_name, base64_decode($file_image));
                 $location_file =  env('APP_URL') .'/assets/images/competitor/' . $file_name;
 
@@ -285,10 +285,10 @@ class DealerController extends Controller {
                     ->insert('insert into competitor (kd_dealer, role_id, user_id, nama_competitor, produk, judul, tgl_awal, tgl_akhir,
                                 description, usertime, companyid, photo) values (?,?,?,?,?,?,?,?,?,?,?,?)', [
                     strtoupper(trim($request->get('code_dealer'))), strtoupper(trim($request->get('id_role'))),
-                    strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->get('name_competitor'))),
+                    strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($request->get('name_competitor'))),
                     strtoupper(trim($request->get('product'))), strtoupper(trim($request->get('title_activity_competitor'))),
                     $request->get('begin_effdate'), $request->get('end_effdate'), $request->get('description'),
-                    date('Y-m-d H:i:s'), strtoupper(trim($request->userlogin->companyid)), json_encode($data_photo)
+                    date('Y-m-d H:i:s'), strtoupper(trim($request->userlogin['companyid'])), json_encode($data_photo)
                 ]);
             });
 
@@ -321,22 +321,22 @@ class DealerController extends Controller {
                 return ApiResponse::responseWarning('Isi data dealer baru secara lengkap');
             }
 
-            $request->userlogin->user_id = $request->userlogin->user_id;
-            $request->userlogin->companyid = $request->userlogin->companyid;
+            $request->userlogin['user_id'] = $request->userlogin['user_id'];
+            $request->userlogin['companyid'] = $request->userlogin['companyid'];
 
             $geoLocation = explode(",", $request->get('latlong'));
             $latitude = trim($geoLocation[0]);
             $longitude = trim($geoLocation[1]);
-            $code_dealer = time().'='.$request->userlogin->user_id;
+            $code_dealer = time().'='.$request->userlogin['user_id'];
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $code_dealer, $latitude, $longitude) {
                 DB::connection($request->get('divisi'))
                     ->insert('exec SP_DealerCandidate_Simpan ?,?,?,?,?,?,?,?,?', [
-                        strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($code_dealer)),
+                        strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($code_dealer)),
                         strtoupper(trim($request->get('name'))), trim($latitude),
                         trim($longitude), strtoupper(trim($request->get('address'))),
                         strtoupper(trim($request->get('description'))),
-                        trim($request->get('phone')), strtoupper(trim($request->userlogin->companyid))
+                        trim($request->get('phone')), strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -359,8 +359,8 @@ class DealerController extends Controller {
                 return ApiResponse::responseWarning('Isi data divisi dan kode dealer terlebih dahulu');
             }
 
-            $request->userlogin->user_id = strtoupper(trim($request->userlogin->user_id));
-            $request->userlogin->companyid = strtoupper(trim($request->userlogin->companyid));
+            $request->userlogin['user_id'] = strtoupper(trim($request->userlogin['user_id']));
+            $request->userlogin['companyid'] = strtoupper(trim($request->userlogin['companyid']));
 
             $result = DB::connection($request->get('divisi'))
                         ->table('dealer')->lock('with (nolock)')
@@ -381,7 +381,7 @@ class DealerController extends Controller {
                 DB::connection($request->get('divisi'))
                     ->insert('exec SP_Dealer_UpdateLokasi ?,?,?,?,?', [
                         strtoupper(trim($request->get('kode_dealer'))), $latitude, $longitude,
-                        strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->userlogin->companyid))
+                        strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -406,12 +406,12 @@ class DealerController extends Controller {
             /* ==================================================================== */
             /* Cek Role Id Supervisor */
             /* ==================================================================== */
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql = DB::connection($request->get('divisi'))
                         ->table('superspv')->lock('with (nolock)')
                         ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
-                        ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
+                        ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->first();
 
                 if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
@@ -461,7 +461,7 @@ class DealerController extends Controller {
                     (
                         select	msdealer.companyid, msdealer.id, msdealer.kd_dealer
                         from    msdealer with (nolock)
-                        where	msdealer.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                        where	msdealer.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                 msdealer.kd_dealer in (".trim($list_dealer).")
                     )	msdealer
                             inner join dealer with (nolock) on msdealer.kd_dealer=dealer.kd_dealer and
@@ -470,9 +470,9 @@ class DealerController extends Controller {
                                         msdealer.companyid=salesman.companyid
                     where   msdealer.companyid is not null";
 
-            if(strtoupper(trim($request->userlogin->role_id)) == "MD_H3_SM") {
-                $sql .= " and dealer.kd_sales='".strtoupper(trim($request->userlogin->user_id))."'";
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == "MD_H3_SM") {
+                $sql .= " and dealer.kd_sales='".strtoupper(trim($request->userlogin['user_id']))."'";
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql .= " and salesman.spv='".strtoupper(trim($kode_supervisor))."'";
             }
 
@@ -489,9 +489,9 @@ class DealerController extends Controller {
                     'salesman_code'         => strtoupper(trim($data->salesman_code)),
                     'salesman_name'         => strtoupper(trim($data->salesman_name)),
                     'date'                  => $data->date,
-                    'plafon_kredit_limit'   => (strtoupper(trim($request->userlogin->role_id)) == 'D_H3') ? 0 : (double)$data->plafon_kredit_limit,
-                    'maximum_open'          => (strtoupper(trim($request->userlogin->role_id)) == 'D_H3') ? 0 : (double)$data->maximum_open,
-                    'sisa_piutang'          => (strtoupper(trim($request->userlogin->role_id)) == 'D_H3') ? 0 : (double)$data->sisa_piutang,
+                    'plafon_kredit_limit'   => (strtoupper(trim($request->userlogin['role_id'])) == 'D_H3') ? 0 : (double)$data->plafon_kredit_limit,
+                    'maximum_open'          => (strtoupper(trim($request->userlogin['role_id'])) == 'D_H3') ? 0 : (double)$data->maximum_open,
+                    'sisa_piutang'          => (strtoupper(trim($request->userlogin['role_id'])) == 'D_H3') ? 0 : (double)$data->sisa_piutang,
                 ];
             }
 
@@ -579,7 +579,7 @@ class DealerController extends Controller {
                                         faktur.total, faktur.terbayar, faktur.tgl_sj,
                                         faktur.umur_faktur, faktur.jtp_khusus
                                 from	faktur with (nolock)
-                                where	faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                         faktur.kd_dealer in (".$list_dealer.")
                             )	faktur
                                     left join terimadtl with (nolock) on faktur.no_faktur=terimadtl.no_faktur
@@ -641,7 +641,7 @@ class DealerController extends Controller {
                     ->table('faktur')->lock('with (nolock)')
                     ->selectRaw("isnull(faktur.no_faktur, '') as nomor_faktur")
                     ->where('faktur.no_faktur', $request->get('nomor_faktur'))
-                    ->where('faktur.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('faktur.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty('nomor_faktur') || trim($sql->nomor_faktur) == '') {
@@ -729,7 +729,7 @@ class DealerController extends Controller {
                                         faktur.companyid=terima.companyid
                     order by terima.no_bpk asc";
 
-            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->get('nomor_faktur'))), strtoupper(trim($request->userlogin->companyid)) ]);
+            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->get('nomor_faktur'))), strtoupper(trim($request->userlogin['companyid'])) ]);
 
             $jumlah_data = 0;
             $data_pembayaran = new Collection();

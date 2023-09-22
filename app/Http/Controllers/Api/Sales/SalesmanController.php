@@ -25,12 +25,12 @@ class SalesmanController extends Controller
             /* ==================================================================== */
             /* Cek Role Id Supervisor */
             /* ==================================================================== */
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql = DB::connection($request->get('divisi'))
                         ->table('superspv')->lock('with (nolock)')
                         ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
-                        ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
+                        ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->first();
 
                 if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
@@ -47,12 +47,12 @@ class SalesmanController extends Controller
                                 isnull(salesman.nm_sales, '') as name,
                                 isnull(salesman.usertime, '') as created_at,
                                 isnull(salesman.usertime, '') as update_at")
-                    ->where('salesman.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('salesman.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql->where('salesman.spv', strtoupper(trim($kode_supervisor)));
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_SM') {
-                $sql->where('salesman.kd_sales', strtoupper(trim($request->userlogin->user_id)));
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+                $sql->where('salesman.kd_sales', strtoupper(trim($request->userlogin['user_id'])));
             }
 
             if(!empty($request->get('search')) && trim($request->get('search')) != '') {
@@ -108,12 +108,12 @@ class SalesmanController extends Controller
             /* ==================================================================== */
             /* Cek Role Id Supervisor */
             /* ==================================================================== */
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql = DB::connection($request->get('divisi'))
                         ->table('superspv')->lock('with (nolock)')
                         ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
-                        ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
+                        ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->first();
 
                 if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
@@ -130,12 +130,12 @@ class SalesmanController extends Controller
                                 isnull(salesman.nm_sales, '') as name,
                                 isnull(salesman.usertime, '') as created_at,
                                 isnull(salesman.usertime, '') as update_at")
-                    ->where('salesman.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('salesman.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql->where('salesman.spv', strtoupper(trim($kode_supervisor)));
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_SM') {
-                $sql->where('salesman.kd_sales', strtoupper(trim($request->userlogin->user_id)));
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+                $sql->where('salesman.kd_sales', strtoupper(trim($request->userlogin['user_id'])));
             }
 
             if(!empty($request->get('search')) && trim($request->get('search')) != '') {
@@ -188,7 +188,7 @@ class SalesmanController extends Controller
                                 isnull(superspv.nm_spv, '') as name,
                                 isnull(superspv.usertime, '') as created_at,
                                 isnull(superspv.usertime, '') as update_at")
-                    ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
             if(!empty($request->get('search')) && trim($request->get('search')) != '') {
                 $sql->where(function($query) use ($request) {

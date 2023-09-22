@@ -31,7 +31,7 @@ class NotificationController extends Controller
 
             $sql = DB::connection($request->get('divisi'))->table('notification')->lock('with (nolock)')
                     ->selectRaw("count(notification.user_id) as count")
-                    ->where('notification.user_id', strtoupper(trim($request->userlogin->user_id)))
+                    ->where('notification.user_id', strtoupper(trim($request->userlogin['user_id'])))
                     ->whereRaw("isnull(notification.sts_read, 0)=0")
                     ->groupBy('notification.user_id')
                     ->first();
@@ -45,8 +45,8 @@ class NotificationController extends Controller
             }
 
             $data = [
-                'user_id'   => strtoupper(trim($request->userlogin->user_id)),
-                'email'     => strtoupper(trim($request->userlogin->email)),
+                'user_id'   => strtoupper(trim($request->userlogin['user_id'])),
+                'email'     => strtoupper(trim($request->userlogin['email'])),
                 'count'     => (double)$jumlah_notification
             ];
 
@@ -76,8 +76,8 @@ class NotificationController extends Controller
                                 isnull(notification.message, '') as message,
                                 isnull(notification.type, '') as type,
                                 isnull(notification.code, '') as code")
-                    ->where('notification.user_id', strtoupper(trim($request->userlogin->user_id)))
-                    ->where('notification.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('notification.user_id', strtoupper(trim($request->userlogin['user_id'])))
+                    ->where('notification.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderBy('notification.id', 'desc')
                     ->paginate(10);
 
@@ -147,7 +147,7 @@ class NotificationController extends Controller
                                 ->on('dealer.companyid', '=', 'pof.companyid');
                         })
                         ->whereRaw("pof.no_pof in (".strtoupper(trim($list_pof_code)).")")
-                        ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->get();
 
                 foreach($sql as $data) {
@@ -174,7 +174,7 @@ class NotificationController extends Controller
                                     isnull(camp.tgl_prd2, '') as tanggal_akhir,
                                     isnull(camp.picture, '') as picture")
                         ->whereRaw("camp.no_camp in (".strtoupper(trim($list_campaign_code)).")")
-                        ->where('camp.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('camp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->get();
 
                 foreach($sql as $data) {

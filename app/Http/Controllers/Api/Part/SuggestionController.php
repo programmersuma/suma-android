@@ -28,7 +28,7 @@ class SuggestionController extends Controller
                     ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -88,7 +88,7 @@ class SuggestionController extends Controller
                                         select	faktur.companyid, faktur.no_faktur
                                         from	faktur with (nolock)
                                         where	faktur.tgl_faktur >= dateadd(month, -3, getdate()) and
-                                                faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                                faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                                 faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
                                     )	faktur
                                             inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
@@ -138,7 +138,7 @@ class SuggestionController extends Controller
                             (
                                 select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
                                 from	faktur with (nolock)
-                                where	faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
+                                where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
                             )	faktur
                                     inner join fakt_dtl on faktur.no_faktur=fakt_dtl.no_faktur and
                                                 faktur.companyid=fakt_dtl.companyid
@@ -160,7 +160,7 @@ class SuggestionController extends Controller
                             (
                                 select	pof.companyid, pof.no_pof, pof.tgl_pof
                                 from	pof with (nolock)
-                                where	pof.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                         pof.kd_dealer='".strtoupper(trim($kode_dealer))."'
                             )	pof
                                     inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
@@ -177,7 +177,7 @@ class SuggestionController extends Controller
                         (
                             select	camp.companyid, camp.no_camp
                             from	camp with (nolock)
-                            where	camp.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                            where	camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                     camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
                                     camp.tgl_prd2 <= convert(varchar(10), getdate(), 120)
                         )	camp
@@ -197,7 +197,7 @@ class SuggestionController extends Controller
 
             foreach($result as $data) {
                 if((double)$data->stock_total_part > 0) {
-                    if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_MGMT') {
+                    if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_MGMT') {
                         $available_part = 'Available '.trim($data->stock_total_part).' pcs';
                     } else {
                         $available_part = 'Available';
@@ -261,7 +261,7 @@ class SuggestionController extends Controller
                     ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_dealer)) {
@@ -277,9 +277,9 @@ class SuggestionController extends Controller
                             where   cart_dtlsuggesttmp.kd_key=? and
                                     cart_dtlsuggesttmp.kd_dealer=? and
                                     cart_dtlsuggesttmp.companyid=?", [
-                                        strtoupper(trim($request->userlogin->user_id)),
+                                        strtoupper(trim($request->userlogin['user_id'])),
                                         strtoupper(trim($kode_dealer)),
-                                        strtoupper(trim($request->userlogin->companyid)),
+                                        strtoupper(trim($request->userlogin['companyid'])),
                                     ]);
             });
 
@@ -298,11 +298,11 @@ class SuggestionController extends Controller
 
                 foreach($list_part as $result) {
                     $list_part_suggest[] = [
-                        'kd_key'    => strtoupper(trim($request->userlogin->user_id)).'/'.strtoupper(trim($kode_dealer)),
+                        'kd_key'    => strtoupper(trim($request->userlogin['user_id'])).'/'.strtoupper(trim($kode_dealer)),
                         'kd_dealer' => strtoupper(trim($kode_dealer)),
                         'part_id'   => (int)$result->part_id,
                         'qty'       => (double)$result->qty,
-                        'companyid' => strtoupper(trim($request->userlogin->companyid))
+                        'companyid' => strtoupper(trim($request->userlogin['companyid']))
                     ];
                 }
 
@@ -311,8 +311,8 @@ class SuggestionController extends Controller
 
                     DB::connection($request->get('divisi'))
                         ->insert('exec SP_CartDtlTmp_AddSuggestOrder ?,?,?,?', [
-                            strtoupper(trim($kode_dealer)), strtoupper(trim($request->userlogin->role_id)),
-                            strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->userlogin->companyid))
+                            strtoupper(trim($kode_dealer)), strtoupper(trim($request->userlogin['role_id'])),
+                            strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($request->userlogin['companyid']))
                         ]);
                 });
 

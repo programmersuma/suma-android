@@ -33,7 +33,7 @@ class PromoController extends Controller
                                 isnull(convert(varchar(10), camp.tgl_prd2, 120), '') as tanggal_akhir,
                                 isnull(camp.picture, '') as picture,
                                 isnull(camp.usertime, '') as usertime")
-                    ->where('camp.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('camp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->whereRaw("camp.tgl_prd1 <= convert(varchar(10), getdate(), 120) and
                                 camp.tgl_prd2 >= convert(varchar(10), getdate(), 120)")
                     ->orderByRaw("camp.tgl_prd2 asc")
@@ -88,7 +88,7 @@ class PromoController extends Controller
                             ->on('camp_dtl.companyid', '=', 'camp.companyid');
                     })
                     ->where('camp.no_camp', strtoupper(trim($request->get('code'))))
-                    ->where('camp.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('camp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->groupByRaw("camp_dtl.kd_part")
                     ->orderByRaw("camp_dtl.kd_part asc")
                     ->paginate(10);
@@ -149,7 +149,7 @@ class PromoController extends Controller
                         where   camp_dtl.kd_part in (".strtoupper(trim($list_part_number)).")
                         order by camp.tgl_prd2 asc, camp_dtl.kd_part asc, camp.no_camp asc";
 
-                $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->get('code'))), strtoupper(trim($request->userlogin->companyid)) ]);
+                $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->get('code'))), strtoupper(trim($request->userlogin['companyid'])) ]);
 
 
                 foreach($result as $data) {
@@ -217,7 +217,7 @@ class PromoController extends Controller
                     })
                     ->whereRaw("camp.tgl_prd1 <= convert(varchar(10), getdate(), 120) and
                                 camp.tgl_prd2 >= convert(varchar(10), getdate(), 120)")
-                    ->where('camp.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('camp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->groupByRaw("camp_dtl.kd_part")
                     ->orderByRaw("camp_dtl.kd_part asc")
                     ->paginate(10);
@@ -280,7 +280,7 @@ class PromoController extends Controller
                         where   camp_dtl.kd_part in (".strtoupper(trim($list_part_number)).")
                         order by camp.tgl_prd2 asc, camp_dtl.kd_part asc, camp.no_camp asc";
 
-                $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin->companyid))  ]);
+                $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin['companyid']))  ]);
 
 
                 foreach($result as $data) {

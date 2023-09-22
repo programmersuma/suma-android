@@ -23,14 +23,14 @@ class DashboardController extends Controller
             return ApiResponse::responseWarning('Data divisi, kategori, tahun, dan bulan harus terisi');
         }
 
-        $kode_mkr = strtoupper(trim($request->userlogin->user_id));
+        $kode_mkr = strtoupper(trim($request->userlogin['user_id']));
 
-        if (strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+        if (strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
             $sql = DB::connection($request->get('divisi'))
                     ->table("superspv")->lock('with (nolock)')
                     ->selectRaw("isnull(superspv.kd_spv, '') as kode_spv")
-                    ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
-                    ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
+                    ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_spv) || trim($sql->kode_spv) == '') {
@@ -46,15 +46,15 @@ class DashboardController extends Controller
             // ======================================================================
             if(strtoupper(trim($request->get('divisi'))) == 'SQLSRV_GENERAL') {
                 return $this->dashboardSalesmanFdr($request, $request->get('year'), $request->get('month'),
-                        $request->get('item_group'), strtoupper(trim($request->userlogin->role_id)), strtoupper(trim($kode_mkr)),
-                        (int)$request->userlogin->id, strtoupper(trim($request->userlogin->user_id)),
-                        strtoupper(trim($request->userlogin->companyid)));
+                        $request->get('item_group'), strtoupper(trim($request->userlogin['role_id'])), strtoupper(trim($kode_mkr)),
+                        (int)$request->userlogin['id'], strtoupper(trim($request->userlogin['user_id'])),
+                        strtoupper(trim($request->userlogin['companyid'])));
             } else {
                 return $this->dashboardSalesman($request, $request->get('year'), $request->get('month'),
-                        $request->get('item_group'), strtoupper(trim($request->userlogin->role_id)),
-                        strtoupper(trim($kode_mkr)), (int)$request->userlogin->id,
-                        strtoupper(trim($request->userlogin->user_id)),
-                        strtoupper(trim($request->userlogin->companyid)));
+                        $request->get('item_group'), strtoupper(trim($request->userlogin['role_id'])),
+                        strtoupper(trim($kode_mkr)), (int)$request->userlogin['id'],
+                        strtoupper(trim($request->userlogin['user_id'])),
+                        strtoupper(trim($request->userlogin['companyid'])));
             }
         } elseif (strtoupper(trim($request->get('category'))) == 'DEALER') {
             $validate = Validator::make($request->all(), [
@@ -69,10 +69,10 @@ class DashboardController extends Controller
             // RESULT RETURN
             // ======================================================================
             return $this->dashboardDealer($request, $request->get('year'), $request->get('month'), $request->get('ms_dealer_id'),
-                            $request->get('item_group'), strtoupper(trim($request->userlogin->role_id)),
-                            strtoupper(trim($request->userlogin->companyid)));
+                            $request->get('item_group'), strtoupper(trim($request->userlogin['role_id'])),
+                            strtoupper(trim($request->userlogin['companyid'])));
         } else {
-            if (strtoupper(trim($request->userlogin->role_id)) != 'MD_H3_MGMT') {
+            if (strtoupper(trim($request->userlogin['role_id'])) != 'MD_H3_MGMT') {
                 return ApiResponse::responseWarning('Anda tidak memiliki akses untuk masuk ke halaman ini');
             }
             $validate = Validator::make($request->all(), [
@@ -87,7 +87,7 @@ class DashboardController extends Controller
             // RESULT RETURN
             // ======================================================================
             return $this->dashboardManagement($request, $request->get('year'), $request->get('month'), $request->get('item_group'),
-                            strtoupper(trim($request->userlogin->companyid)));
+                            strtoupper(trim($request->userlogin['companyid'])));
         }
     }
 

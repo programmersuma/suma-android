@@ -31,8 +31,8 @@ class PartController extends Controller {
                                 iif(isnull(typemotor_fav.typemkt, '')='', 0, 1) as favorite")
                     ->leftJoin(DB::raw('typemotor_fav with (nolock)'), function($join) use($request) {
                         $join->on('typemotor_fav.typemkt', '=', 'typemotor.typemkt')
-                            ->on('typemotor_fav.user_id', '=', DB::raw("'".strtoupper(trim($request->userlogin->user_id))."'"))
-                            ->on('typemotor_fav.companyid', '=', DB::raw("'".strtoupper(trim($request->userlogin->companyid))."'"));
+                            ->on('typemotor_fav.user_id', '=', DB::raw("'".strtoupper(trim($request->userlogin['user_id']))."'"))
+                            ->on('typemotor_fav.companyid', '=', DB::raw("'".strtoupper(trim($request->userlogin['companyid']))."'"));
                     });
 
             if(!empty($request->get('search')) && trim($request->get('search') != '')) {
@@ -107,8 +107,8 @@ class PartController extends Controller {
                                 iif(isnull(produk_fav.kd_produk, '')='', 0, 1) as favorite")
                     ->leftJoin(DB::raw('produk_fav with (nolock)'), function($join) use($request) {
                         $join->on('produk_fav.kd_produk', '=', 'produk.kd_produk')
-                            ->on('produk_fav.user_id', '=', DB::raw("'".strtoupper(trim($request->userlogin->user_id))."'"))
-                            ->on('produk_fav.companyid', '=', DB::raw("'".strtoupper(trim($request->userlogin->companyid))."'"));
+                            ->on('produk_fav.user_id', '=', DB::raw("'".strtoupper(trim($request->userlogin['user_id']))."'"))
+                            ->on('produk_fav.companyid', '=', DB::raw("'".strtoupper(trim($request->userlogin['companyid']))."'"));
                     });
 
             if(!empty('search') && trim($request->get('search') != '')) {
@@ -179,7 +179,7 @@ class PartController extends Controller {
                     ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(kd_dealer, '') as kode_dealer")
                     ->where('id', $request->get('ms_dealer_id'))
-                    ->where('companyid', $request->userlogin->companyid)
+                    ->where('companyid', $request->userlogin['companyid'])
                     ->first();
 
             if(empty($sql->kode_dealer)) {
@@ -198,7 +198,7 @@ class PartController extends Controller {
                     ->selectRaw("isnull(part.kd_part, '') as part_number")
                     ->whereRaw("isnull(part.del_send, 0) = 0")
                     ->whereRaw("part.kd_sub <> 'DSTO'")
-                    ->where('part.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('part.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
             if(!empty($request->get('item_group')) || $request->get('item_group') != '') {
                 if($request->get('item_group') != 0) {
@@ -309,7 +309,7 @@ class PartController extends Controller {
                                         part.konsinyasi, part.kanvas, part.jml1dus, part.kelas,
                                         part.jenis, part.type, part.kategori, part.pattern
                                 from	part with (nolock)
-                                where	part.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                where	part.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                         part.kd_part in (".$list_search_part.")
                             )	part
                                     inner join company with (nolock) on part.companyid=company.companyid
@@ -331,7 +331,7 @@ class PartController extends Controller {
                                 left join pdirect with (nolock) on part.kd_part=pdirect.kd_part and
                                             part.companyid=pdirect.companyid
                                 left join part_fav with (nolock) on part.kd_part=part_fav.kd_part and
-                                            part.companyid=part_fav.companyid and part_fav.user_id='".strtoupper(trim($request->userlogin->user_id))."'
+                                            part.companyid=part_fav.companyid and part_fav.user_id='".strtoupper(trim($request->userlogin['user_id']))."'
                                 left join bo with (nolock) on part.kd_part=bo.kd_part and
                                             '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer and part.companyid=bo.companyid
                                 left join
@@ -350,7 +350,7 @@ class PartController extends Controller {
                                             (
                                                 select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
                                                 from	faktur with (nolock)
-                                                where	faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                                where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                                         faktur.kd_dealer='".strtoupper(trim($kode_dealer))."' and
                                                         cast(faktur.tgl_faktur as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
                                             )	faktur
@@ -380,7 +380,7 @@ class PartController extends Controller {
                                             (
                                                 select	pof.companyid, pof.no_pof, pof.tgl_pof
                                                 from	pof with (nolock)
-                                                where	pof.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                                where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                                         pof.kd_dealer='".strtoupper(trim($kode_dealer))."' and
                                                         cast(pof.tgl_pof as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
                                             )	pof
@@ -412,7 +412,7 @@ class PartController extends Controller {
                                             from	camp with (nolock)
                                             where	camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
                                                     camp.tgl_prd2 <= convert(varchar(10), getdate(), 120) and
-                                                    camp.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                                    camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                                         )	camp
                                                 inner join camp_dtl with (nolock) on camp.no_camp=camp_dtl.no_camp and
                                                             camp.companyid=camp_dtl.companyid
@@ -452,7 +452,7 @@ class PartController extends Controller {
                     if((double)$data->stock_total_part <= 0) {
                         $stock_part = 'Not Available';
                     } else {
-                        if(strtoupper(trim($request->userlogin->role_id)) == "MD_H3_MGMT") {
+                        if(strtoupper(trim($request->userlogin['role_id'])) == "MD_H3_MGMT") {
                             $stock_part = 'Available '.number_format((double)$data->stock_total_part).' pcs';
                         } else {
                             $stock_part = 'Available';
@@ -587,7 +587,7 @@ class PartController extends Controller {
                     ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(kd_dealer, '') as kode_dealer")
                     ->where('id', $request->get('ms_dealer_id'))
-                    ->where('companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_dealer)) {
@@ -616,8 +616,8 @@ class PartController extends Controller {
                     order by part_fav.kd_part asc";
 
             $result = DB::connection($request->get('divisi'))->select($sql, [
-                strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($kode_dealer)),
-                strtoupper(trim($request->userlogin->companyid))
+                strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($kode_dealer)),
+                strtoupper(trim($request->userlogin['companyid']))
             ]);
 
             $list_search_part = '';
@@ -682,7 +682,7 @@ class PartController extends Controller {
                                         part.konsinyasi, part.kanvas, part.jml1dus, part.kelas,
                                         part.jenis, part.type, part.kategori, part.pattern
                                 from	part with (nolock)
-                                where	part.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                where	part.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                         part.kd_part in (".$list_search_part.")
                             )	part
                                     inner join company with (nolock) on part.companyid=company.companyid
@@ -704,7 +704,7 @@ class PartController extends Controller {
                                 left join pdirect with (nolock) on part.kd_part=pdirect.kd_part and
                                             part.companyid=pdirect.companyid
                                 left join part_fav with (nolock) on part.kd_part=part_fav.kd_part and
-                                            part.companyid=part_fav.companyid and part_fav.user_id='".strtoupper(trim($request->userlogin->user_id))."'
+                                            part.companyid=part_fav.companyid and part_fav.user_id='".strtoupper(trim($request->userlogin['user_id']))."'
                                 left join bo with (nolock) on part.kd_part=bo.kd_part and
                                             '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer and part.companyid=bo.companyid
                                 left join
@@ -723,7 +723,7 @@ class PartController extends Controller {
                                             (
                                                 select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
                                                 from	faktur with (nolock)
-                                                where	faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                                where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                                         faktur.kd_dealer='".strtoupper(trim($kode_dealer))."' and
                                                         cast(faktur.tgl_faktur as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
                                             )	faktur
@@ -753,7 +753,7 @@ class PartController extends Controller {
                                             (
                                                 select	pof.companyid, pof.no_pof, pof.tgl_pof
                                                 from	pof with (nolock)
-                                                where	pof.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                                where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                                         pof.kd_dealer='".strtoupper(trim($kode_dealer))."' and
                                                         cast(pof.tgl_pof as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
                                             )	pof
@@ -785,7 +785,7 @@ class PartController extends Controller {
                                             from	camp with (nolock)
                                             where	camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
                                                     camp.tgl_prd2 <= convert(varchar(10), getdate(), 120) and
-                                                    camp.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                                    camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                                         )	camp
                                                 inner join camp_dtl with (nolock) on camp.no_camp=camp_dtl.no_camp and
                                                             camp.companyid=camp_dtl.companyid
@@ -825,7 +825,7 @@ class PartController extends Controller {
                     if((double)$data->stock_total_part <= 0) {
                         $stock_part = 'Not Available';
                     } else {
-                        if(strtoupper(trim($request->userlogin->role_id)) == "MD_H3_MGMT") {
+                        if(strtoupper(trim($request->userlogin['role_id'])) == "MD_H3_MGMT") {
                             $stock_part = 'Available '.number_format((double)$data->stock_total_part).' pcs';
                         } else {
                             $stock_part = 'Available';
@@ -976,7 +976,7 @@ class PartController extends Controller {
             $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(kd_dealer, '') as kode_dealer")
                     ->where('id', $request->get('ms_dealer_id'))
-                    ->where('companyid', $request->userlogin->companyid)
+                    ->where('companyid', $request->userlogin['companyid'])
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -987,9 +987,9 @@ class PartController extends Controller {
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_dealer, $part_number) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PartFavorite_Simpan ?,?,?,?,?', [
-                    strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($kode_dealer)),
+                    strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($kode_dealer)),
                     strtoupper(trim($part_number)), (int)$request->get('is_love'),
-                    strtoupper(trim($request->userlogin->companyid))
+                    strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -1020,12 +1020,12 @@ class PartController extends Controller {
             $filter_dealer = $request->get('dealer');
             $filter_part_number = $request->get('part_number');
 
-            if ($request->userlogin->role_id == "MD_H3_SM") {
-                $filter_salesman = $request->userlogin->user_id;
+            if ($request->userlogin['role_id'] == "MD_H3_SM") {
+                $filter_salesman = $request->userlogin['user_id'];
             }
 
-            if ($request->userlogin->role_id == "D_H3") {
-                $filter_dealer = $request->userlogin->user_id;
+            if ($request->userlogin['role_id'] == "D_H3") {
+                $filter_dealer = $request->userlogin['user_id'];
             }
 
             $sql = DB::connection($request->get('divisi'))->table('bo')->lock('with (nolock)')
@@ -1053,7 +1053,7 @@ class PartController extends Controller {
                         $join->on('produk.kd_produk', '=', 'sub.kd_produk');
                     })
                     ->whereRaw("isnull(bo.jumlah, 0) > 0")
-                    ->where('bo.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('bo.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
             if (!empty($filter_salesman) || trim($filter_salesman) != '') {
                 $sql->where('bo.kd_sales', strtoupper(trim($filter_salesman)));
@@ -1110,7 +1110,7 @@ class PartController extends Controller {
             $sql = DB::connection($request->get('divisi'))->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer")
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('msdealer.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -1165,7 +1165,7 @@ class PartController extends Controller {
                                     part.in_transit, part.kanvas, part.min_gudang, part.min_htl
                             from	part with (nolock)
                             where	part.kd_part='".strtoupper(trim($part_number))."' and
-                                    part.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                    part.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                         )	part
                                 inner join company with (nolock) on part.companyid=company.companyid
                                 left join sub with (nolock) on part.kd_sub=sub.kd_sub
@@ -1192,7 +1192,7 @@ class PartController extends Controller {
                             select	faktur.companyid, faktur.no_faktur
                             from	faktur with (nolock)
                             where	faktur.tgl_faktur >= dateadd(month, -3, getdate()) and
-                                    faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                    faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                     faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
                         )	faktur
                                 inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
@@ -1215,7 +1215,7 @@ class PartController extends Controller {
                             (
                                 select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
                                 from	faktur with (nolock)
-                                where	faktur.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                         faktur.kd_dealer='".strtoupper(trim($kode_dealer))."'
                             )	faktur
                                     inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
@@ -1239,7 +1239,7 @@ class PartController extends Controller {
                             (
                                 select	pof.companyid, pof.no_pof, pof.tgl_pof
                                 from	pof with (nolock)
-                                where	pof.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                                where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                         pof.kd_dealer='".strtoupper(trim($kode_dealer))."'
                             )	pof
                                     inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
@@ -1257,7 +1257,7 @@ class PartController extends Controller {
                         (
                             select	camp.companyid, camp.no_camp
                             from	camp with (nolock)
-                            where	camp.companyid='".strtoupper(trim($request->userlogin->companyid))."' and
+                            where	camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
                                     camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
                                     camp.tgl_prd2 <= convert(varchar(10), getdate(), 120)
                         )	camp
@@ -1276,7 +1276,7 @@ class PartController extends Controller {
                 $jumlah_data = (double)$jumlah_data + 1;
 
                 if((double)$data->stock_total_part > 0) {
-                    if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_MGMT') {
+                    if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_MGMT') {
                         $available_part = 'Available '.trim($data->stock_total_part).' pcs';
                     } else {
                         $available_part = 'Available';

@@ -45,7 +45,7 @@ class VisitController extends Controller
                                     visit_date.companyid=dealer.companyid
                 order by visit.check_in asc";
 
-            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->userlogin->companyid)) ]);
+            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($request->userlogin['companyid'])) ]);
             $data_checkIn = new Collection();
             $jumlah_data = 0;
 
@@ -87,7 +87,7 @@ class VisitController extends Controller
                     ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(kd_dealer, '') as kode_dealer")
                     ->where('id', $request->get('ms_dealer_id'))
-                    ->where('companyid', $request->userlogin->companyid)
+                    ->where('companyid', $request->userlogin['companyid'])
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
@@ -102,8 +102,8 @@ class VisitController extends Controller
                                 isnull(visit_date.tanggal, '') as date,
                                 isnull(visit_date.created_at, '') as created_at,
                                 isnull(visit_date.updated_at, '') as updated_at")
-                    ->where('visit_date.companyid', strtoupper(trim($request->userlogin->companyid)))
-                    ->where('visit_date.kd_sales', strtoupper(trim($request->userlogin->user_id)))
+                    ->where('visit_date.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->where('visit_date.kd_sales', strtoupper(trim($request->userlogin['user_id'])))
                     ->where('visit_date.kd_dealer', strtoupper(trim($kode_dealer)))
                     ->whereRaw("isnull(visit_date.checkin, 0)=0 and
                                 visit_date.tanggal >= convert(date, dateadd(month, -1, getdate()), 111)")
@@ -161,7 +161,7 @@ class VisitController extends Controller
                             ->on('dealer.companyid', '=', 'msdealer.companyid');
                         })
                     ->where('msdealer.id', $request->get('ms_dealer_id'))
-                    ->where('dealer.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('dealer.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '' ) {
@@ -170,16 +170,16 @@ class VisitController extends Controller
 
             $distance = (double)$sql->distance;
 
-            $kode_visit = 'VS'.strtoupper(trim($request->userlogin->companyid)).date('ymd', strtotime($request->get('date'))).
-                            strtoupper(trim($request->userlogin->user_id)).strtoupper(trim($sql->kode_dealer));
+            $kode_visit = 'VS'.strtoupper(trim($request->userlogin['companyid'])).date('ymd', strtotime($request->get('date'))).
+                            strtoupper(trim($request->userlogin['user_id'])).strtoupper(trim($sql->kode_dealer));
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $sql, $kode_visit, $distance) {
                 DB::connection($request->get('divisi'))
                     ->insert('exec SP_VisitTmp_Simpan_new ?,?,?,?,?,?,?,?,?', [
-                        strtoupper(trim($kode_visit)), strtoupper(trim($request->userlogin->user_id)), strtoupper(trim(trim($sql->kode_dealer))),
+                        strtoupper(trim($kode_visit)), strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim(trim($sql->kode_dealer))),
                         trim($request->get('latitude')), trim($request->get('longitude')), (double)$distance,
-                        strtoupper(trim($request->get('keterangan'))), strtoupper(trim($request->userlogin->companyid)),
-                        strtoupper(trim($request->userlogin->user_id))
+                        strtoupper(trim($request->get('keterangan'))), strtoupper(trim($request->userlogin['companyid'])),
+                        strtoupper(trim($request->userlogin['user_id']))
                     ]);
             });
 
@@ -188,7 +188,7 @@ class VisitController extends Controller
                     ->selectRaw("isnull(visittmp.kd_visit, '') as code_visit,
                                 isnull(visittmp.distance, 0) as distance")
                     ->where('visittmp.kd_visit', strtoupper(trim($kode_visit)))
-                    ->where('visittmp.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('visittmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->code_visit)) {
@@ -245,7 +245,7 @@ class VisitController extends Controller
                             ->on('dealer.companyid', '=', 'visittmp.companyid');
                     })
                     ->where('visittmp.kd_visit', strtoupper(trim($request->get('code_visit'))))
-                    ->where('visittmp.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('visittmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if (empty($sql->code_visit) || trim($sql->code_visit) == '') {
@@ -267,7 +267,7 @@ class VisitController extends Controller
             $sql = DB::connection($request->get('divisi'))
                     ->table('visit')->lock('with (nolock)')
                     ->selectRaw("isnull(visit.kd_visit, '') as code_visit")
-                    ->where('visit.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('visit.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->where('visit.kd_sales', strtoupper(trim($kode_sales)))
                     ->whereRaw("visit.check_out is null")
                     ->orderBy('visit.check_in', 'asc')
@@ -282,7 +282,7 @@ class VisitController extends Controller
                     ->insert("exec SP_Visit_Simpan1 ?,?,?,?,?", [
                         strtoupper(trim($request->get('code_visit'))), $request->get('latitude'),
                         $request->get('longitude'), $distance,
-                        strtoupper(trim($request->userlogin->companyid))
+                        strtoupper(trim($request->userlogin['companyid']))
                     ]);
             });
 
@@ -309,7 +309,7 @@ class VisitController extends Controller
                     ->insert('exec SP_Visit_CheckOut ?,?,?', [
                         strtoupper(trim($request->get('code_visit'))),
                         strtoupper(trim($request->get('keterangan'))),
-                        strtoupper(trim($request->userlogin->companyid))
+                        strtoupper(trim($request->userlogin['companyid']))
                     ]);
             });
 
@@ -335,12 +335,12 @@ class VisitController extends Controller
             /* ==================================================================== */
             /* Cek Role Id Supervisor */
             /* ==================================================================== */
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql = DB::connection($request->get('divisi'))
                         ->table('superspv')->lock('with (nolock)')
                         ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin->user_id)))
-                        ->where('superspv.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
+                        ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->first();
 
                 if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
@@ -352,7 +352,7 @@ class VisitController extends Controller
                 $sql = DB::connection($request->get('divisi'))
                         ->table('salesman')->lock('with (nolock)')
                         ->selectRaw("isnull(salesman.kd_sales, '') as kode_sales")
-                        ->where('salesman.companyid', strtoupper(trim($request->userlogin->companyid)))
+                        ->where('salesman.companyid', strtoupper(trim($request->userlogin['companyid'])))
                         ->where('salesman.spv', $kode_supervisor)
                         ->get();
 
@@ -387,9 +387,9 @@ class VisitController extends Controller
                         where	visit_date.companyid=? and
                                 visit_date.tanggal=?";
 
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_SM') {
-                $sql .= " and visit_date.kd_sales='".strtoupper(trim($request->userlogin->user_id))."'";
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+                $sql .= " and visit_date.kd_sales='".strtoupper(trim($request->userlogin['user_id']))."'";
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
                 $sql .= " and visit_date.kd_sales in (".strtoupper(trim($salesman)).")";
             }
 
@@ -410,7 +410,7 @@ class VisitController extends Controller
                                         visit_date.companyid=dealer.companyid
                     order by visit_date.tanggal asc, visit.check_in asc, visit.check_out asc";
 
-            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin->companyid)), $request->get('tanggal') ]);
+            $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin['companyid'])), $request->get('tanggal') ]);
 
             return ApiResponse::responseSuccess('success', $result);
         } catch (\Exception $exception) {
@@ -438,7 +438,7 @@ class VisitController extends Controller
                     ->selectRaw("isnull(salesk_dtl.kd_sales, '') as kode_sales")
                     ->where('salesk_dtl.kd_sales', strtoupper(trim($request->get('salesman'))))
                     ->where('salesk_dtl.kd_dealer', strtoupper(trim($request->get('dealer'))))
-                    ->where('salesk_dtl.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('salesk_dtl.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->kode_sales) || trim($sql->kode_sales) == '') {
@@ -450,7 +450,7 @@ class VisitController extends Controller
                     ->insert('exec SP_PlanVisitSales_Simpan ?,?,?,?,?', [
                         trim($request->get('tanggal')), strtoupper(trim($request->get('dealer'))),
                         strtoupper(trim($request->get('salesman'))), strtoupper(trim($request->get('keterangan'))),
-                        strtoupper(trim($request->userlogin->companyid))
+                        strtoupper(trim($request->userlogin['companyid']))
                     ]);
             });
 
@@ -476,7 +476,7 @@ class VisitController extends Controller
                     ->table('visit')->lock('with (nolock)')
                     ->selectRaw("isnull(visit.kd_visit, '') as code_visit")
                     ->where('visit.kd_visit', strtoupper(trim(trim($request->get('visit_code')))))
-                    ->where('visit.companyid', strtoupper(trim(trim($request->userlogin->companyid))))
+                    ->where('visit.companyid', strtoupper(trim(trim($request->userlogin['companyid']))))
                     ->first();
 
             if (!empty($sql->code_visit)) {
@@ -487,7 +487,7 @@ class VisitController extends Controller
                 DB::connection($request->get('divisi'))
                     ->delete("exec SP_PlanVisitSales_Hapus ?,?", [
                         strtoupper(trim($request->get('visit_code'))),
-                        strtoupper(trim($request->userlogin->companyid))
+                        strtoupper(trim($request->userlogin['companyid']))
                     ]);
             });
 

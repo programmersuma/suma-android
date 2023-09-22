@@ -35,7 +35,7 @@ class RealisasiVisitController extends Controller {
                                 dealer.alamat1, dealer.kabupaten
                         from	dealer with (nolock)
                         where	dealer.kd_dealer='".strtoupper(trim($request->get('code')))."' and
-                                dealer.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                dealer.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                     )	dealer
                     left join
                     (
@@ -63,7 +63,7 @@ class RealisasiVisitController extends Controller {
                                 from	visit_date with (nolock)
                                 where	visit_date.tanggal between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                         visit_date.kd_dealer='".strtoupper(trim($request->get('code')))."' and
-                                        visit_date.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                        visit_date.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                             )	visit_date
                                     left join visit with (nolock) on visit_date.kd_visit=visit.kd_visit and
                                                 visit_date.companyid=visit.companyid
@@ -73,7 +73,7 @@ class RealisasiVisitController extends Controller {
                                         from	pof with (nolock)
                                         where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                                 pof.kd_dealer='".strtoupper(trim($request->get('code')))."' and
-                                                pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                                pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                                         group by pof.companyid, pof.tgl_pof, pof.kd_dealer
                                     )	pof on visit_date.kd_dealer=pof.kd_dealer and
                                                 visit_date.tanggal=pof.tgl_pof
@@ -109,7 +109,7 @@ class RealisasiVisitController extends Controller {
                     ->selectRaw("isnull(visit_date.kd_visit, '') as kode_visit")
                     ->whereBetween('visit_date.tanggal', [ $request->get('start_date'), $request->get('end_date') ])
                     ->where('visit_date.kd_dealer', strtoupper(trim($request->get('code'))))
-                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin->companyid)))))
+                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin['companyid'])))))
                     ->orderBy('visit_date.kd_visit','asc')
                     ->paginate(5);
 
@@ -139,7 +139,7 @@ class RealisasiVisitController extends Controller {
                                     visit_date.kd_dealer, visit_date.tanggal, visit_date.keterangan
                             from	visit_date with (nolock)
                             where	visit_date.kd_visit in (".$kode_visit_result.") and
-                                    visit_date.companyid='".strtoupper(trim(strtoupper(trim($request->userlogin->companyid))))."'
+                                    visit_date.companyid='".strtoupper(trim(strtoupper(trim($request->userlogin['companyid']))))."'
                         )	visit_date
                                 left join visit with (nolock) on visit_date.kd_visit=visit.kd_visit and
                                             visit_date.companyid=visit.companyid
@@ -152,7 +152,7 @@ class RealisasiVisitController extends Controller {
                                     from	pof with (nolock)
                                     where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                             pof.kd_dealer='".strtoupper(trim($request->get('code')))."' and
-                                            pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                            pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                                     group by pof.companyid, pof.tgl_pof, pof.kd_sales, pof.kd_dealer
                                 )	pof on visit_date.kd_sales=pof.kd_sales and
                                             visit_date.kd_dealer=pof.kd_dealer and
@@ -212,8 +212,8 @@ class RealisasiVisitController extends Controller {
                     }
                 }
             }
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_SM') {
-                $salesman_code = strtoupper(trim($request->userlogin->user_id));
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+                $salesman_code = strtoupper(trim($request->userlogin['user_id']));
             } else {
                 $salesman_code = strtoupper(trim($request->get('code')));
             }
@@ -227,7 +227,7 @@ class RealisasiVisitController extends Controller {
                         select	salesman.companyid, salesman.kd_sales, salesman.nm_sales
                         from	salesman with (nolock)
                         where	salesman.kd_sales='".strtoupper(trim($salesman_code))."' and
-                                salesman.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                salesman.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                     )	salesman
                     left join
                     (
@@ -255,7 +255,7 @@ class RealisasiVisitController extends Controller {
                                 from	visit_date with (nolock)
                                 where	visit_date.tanggal between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                         visit_date.kd_sales='".strtoupper(trim($salesman_code))."' and
-                                        visit_date.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                        visit_date.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(trim($list_dealer) != '') {
                 $sql .= " and visit_date.kd_dealer in (".strtoupper(trim($list_dealer)).") ";
@@ -270,7 +270,7 @@ class RealisasiVisitController extends Controller {
                                         from	pof with (nolock)
                                         where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                                 pof.kd_sales='".strtoupper(trim($salesman_code))."' and
-                                                pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                                pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(trim($list_dealer) != '') {
                 $sql .= " and pof.kd_dealer in (".strtoupper(trim($list_dealer)).") ";
@@ -310,7 +310,7 @@ class RealisasiVisitController extends Controller {
                     ->selectRaw("isnull(visit_date.kd_dealer, '') as kode_dealer")
                     ->whereBetween('visit_date.tanggal', [ $request->get('start_date'), $request->get('end_date') ])
                     ->where('visit_date.kd_sales', strtoupper(trim($salesman_code)))
-                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin->companyid)))));
+                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin['companyid'])))));
 
             if(trim($list_dealer) != '') {
                 $sql->whereRaw("visit_date.kd_dealer in (".strtoupper(trim($list_dealer)).")");
@@ -344,7 +344,7 @@ class RealisasiVisitController extends Controller {
                                     dealer.alamat1, dealer.kabupaten
                             from	dealer with (nolock)
                             where	dealer.kd_dealer in (".strtoupper(trim($kode_dealer_result)).") and
-                                    dealer.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                    dealer.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                         )	dealer
                         left join
                         (
@@ -372,7 +372,7 @@ class RealisasiVisitController extends Controller {
                                     from	visit_date with (nolock)
                                     where	visit_date.tanggal between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                             visit_date.kd_dealer in (".strtoupper(trim($kode_dealer_result)).") and
-                                            visit_date.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                            visit_date.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                                 )	visit_date
                                         left join visit with (nolock) on visit_date.kd_visit=visit.kd_visit and
                                                     visit_date.companyid=visit.companyid
@@ -382,7 +382,7 @@ class RealisasiVisitController extends Controller {
                                             from	pof with (nolock)
                                             where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                                     pof.kd_dealer in (".strtoupper(trim($kode_dealer_result)).") and
-                                                    pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                                    pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                                             group by pof.companyid, pof.tgl_pof, pof.kd_dealer
                                         )	pof on visit_date.kd_dealer=pof.kd_dealer and
                                                     visit_date.tanggal=pof.tgl_pof
@@ -458,8 +458,8 @@ class RealisasiVisitController extends Controller {
                 }
             }
 
-            if(strtoupper(trim($request->userlogin->role_id)) == 'MD_H3_KORSM') {
-                $koordinator_code = strtoupper(trim($request->userlogin->user_id));
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
+                $koordinator_code = strtoupper(trim($request->userlogin['user_id']));
             } else {
                 $koordinator_code = strtoupper(trim($request->get('code')));
             }
@@ -475,7 +475,7 @@ class RealisasiVisitController extends Controller {
                                     left join superspv with (nolock) on salesman.spv=superspv.kd_spv and
                                                 salesman.companyid=superspv.companyid
                         where	salesman.spv='".strtoupper(trim($koordinator_code))."' and
-                                salesman.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                salesman.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(strtoupper(trim($list_salesman)) != '') {
                 $sql .= " and salesman.kd_sales in (".strtoupper(trim($list_salesman)).")";
@@ -518,7 +518,7 @@ class RealisasiVisitController extends Controller {
                                                             visit_date.companyid=salesman.companyid
                                     where	visit_date.tanggal between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                             salesman.spv='".strtoupper(trim($koordinator_code))."' and
-                                            visit_date.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                            visit_date.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(strtoupper(trim($list_salesman)) != '') {
                 $sql .= " and visit_date.kd_sales in (".strtoupper(trim($list_salesman)).")";
@@ -539,7 +539,7 @@ class RealisasiVisitController extends Controller {
                                                                     pof.companyid=salesman.companyid
                                             where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                                     salesman.spv='".strtoupper(trim($koordinator_code))."' and
-                                                    pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                                    pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(strtoupper(trim($list_salesman)) != '') {
                 $sql .= " and pof.kd_sales in (".strtoupper(trim($list_salesman)).")";
@@ -588,7 +588,7 @@ class RealisasiVisitController extends Controller {
                     })
                     ->whereBetween('visit_date.tanggal', [ $request->get('start_date'), $request->get('end_date') ])
                     ->where('salesman.spv', strtoupper(trim($koordinator_code)))
-                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin->companyid)))));
+                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin['companyid'])))));
 
             if(trim($list_salesman) != '') {
                 $sql->whereRaw("visit_date.kd_sales in (".strtoupper(trim($list_salesman)).")");
@@ -624,7 +624,7 @@ class RealisasiVisitController extends Controller {
                             select	salesman.companyid, salesman.kd_sales, salesman.nm_sales
                             from	salesman with (nolock)
                             where	salesman.kd_sales in (".strtoupper(trim($kode_sales_result)).") and
-                                    salesman.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                    salesman.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                         )	salesman
                         left join
                         (
@@ -652,7 +652,7 @@ class RealisasiVisitController extends Controller {
                                     from	visit_date with (nolock)
                                     where	visit_date.tanggal between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                             visit_date.kd_sales in (".strtoupper(trim($kode_sales_result)).") and
-                                            visit_date.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                            visit_date.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
                 if(trim($list_dealer) != '') {
                     $sql .= " and visit_date.kd_dealer in (".strtoupper(trim($list_dealer)).") ";
@@ -667,7 +667,7 @@ class RealisasiVisitController extends Controller {
                                             from	pof with (nolock)
                                             where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
                                                     pof.kd_sales in (".strtoupper(trim($kode_sales_result)).") and
-                                                    pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                                    pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
                 if(trim($list_dealer) != '') {
                     $sql .= " and pof.kd_dealer in (".strtoupper(trim($list_dealer)).") ";
@@ -769,7 +769,7 @@ class RealisasiVisitController extends Controller {
                         from	salesman with (nolock)
                                     left join superspv with (nolock) on salesman.spv=superspv.kd_spv and
                                                 salesman.companyid=superspv.companyid
-                        where	salesman.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                        where	salesman.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(trim($list_koordinator) != '') {
                 $sql .= " and salesman.spv in (".strtoupper(trim($list_koordinator)).")";
@@ -815,7 +815,7 @@ class RealisasiVisitController extends Controller {
                                                 left join salesman with (nolock) on visit_date.kd_sales=salesman.kd_sales and
                                                             visit_date.companyid=salesman.companyid
                                     where	visit_date.tanggal between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
-                                            visit_date.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                            visit_date.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(trim($list_koordinator) != '') {
                 $sql .= " and salesman.spv in (".strtoupper(trim($list_koordinator)).")";
@@ -839,7 +839,7 @@ class RealisasiVisitController extends Controller {
                                                         left join salesman with (nolock) on pof.kd_sales=salesman.kd_sales and
                                                                     pof.companyid=salesman.companyid
                                             where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
-                                                    pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                                    pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if(trim($list_koordinator) != '') {
                 $sql .= " and salesman.spv in (".strtoupper(trim($list_koordinator)).")";
@@ -890,7 +890,7 @@ class RealisasiVisitController extends Controller {
                             ->on('salesman.companyid', '=', 'visit_date.companyid');
                     })
                     ->whereBetween('visit_date.tanggal', [ $request->get('start_date'), $request->get('end_date') ])
-                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin->companyid)))));
+                    ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin['companyid'])))));
 
             if(trim($list_koordinator) != '') {
                 $sql->whereRaw("salesman.spv in (".strtoupper(trim($list_koordinator)).")");
@@ -931,7 +931,7 @@ class RealisasiVisitController extends Controller {
                             from	salesman with (nolock)
                                         left join superspv with (nolock) on salesman.spv=superspv.kd_spv and
                                                     salesman.companyid=superspv.companyid
-                            where	salesman.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                            where	salesman.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
                 if(strtoupper(trim($list_koordinator)) != '') {
                     $sql .= " and salesman.spv in (".strtoupper(trim($list_koordinator)).")";
@@ -977,7 +977,7 @@ class RealisasiVisitController extends Controller {
                                                     left join salesman with (nolock) on visit_date.kd_sales=salesman.kd_sales and
                                                                 visit_date.companyid=salesman.companyid
                                         where	visit_date.tanggal between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
-                                                visit_date.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                                visit_date.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
                 if(strtoupper(trim($list_koordinator)) != '') {
                     $sql .= " and salesman.spv in (".strtoupper(trim($list_koordinator)).")";
@@ -1001,7 +1001,7 @@ class RealisasiVisitController extends Controller {
                                                             left join salesman with (nolock) on pof.kd_sales=salesman.kd_sales and
                                                                         pof.companyid=salesman.companyid
                                                 where	pof.tgl_pof between '".$request->get('start_date')."' and '".$request->get('end_date')."' and
-                                                        pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                                        pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
                 if(strtoupper(trim($list_koordinator)) != '') {
                     $sql .= " and salesman.spv in (".strtoupper(trim($list_koordinator)).")";

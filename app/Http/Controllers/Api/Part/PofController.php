@@ -39,12 +39,12 @@ class PofController extends Controller
                     })
                     ->whereYear('pof.tgl_pof', $year)
                     ->whereMonth('pof.tgl_pof', $month)
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)));
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
-            if(strtoupper(trim($request->userlogin->role_id)) == "MD_H3_SM") {
-                $sql->where('pof.kd_sales', strtoupper(trim($request->userlogin->user_id)));
-            } elseif(strtoupper(trim($request->userlogin->role_id)) == "D_H3") {
-                $sql->where('pof.kd_dealer', strtoupper(trim($request->userlogin->user_id)));
+            if(strtoupper(trim($request->userlogin['role_id'])) == "MD_H3_SM") {
+                $sql->where('pof.kd_sales', strtoupper(trim($request->userlogin['user_id'])));
+            } elseif(strtoupper(trim($request->userlogin['role_id'])) == "D_H3") {
+                $sql->where('pof.kd_dealer', strtoupper(trim($request->userlogin['user_id'])));
             }
 
             if(!empty($request->get('salesman')) && trim($request->get('salesman')) != '') {
@@ -95,7 +95,7 @@ class PofController extends Controller
                                     pof.kd_tpc, pof.disc, pof.total, pof.sts_fakt, pof.usertime
                             from	pof with (nolock)
                             where	pof.no_pof in (".$nomor_pof_result.") and
-                                    pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                    pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                         )	pof
                                 left join salesman with (nolock) on pof.kd_sales=salesman.kd_sales and
                                             pof.companyid=salesman.companyid
@@ -192,7 +192,7 @@ class PofController extends Controller
                                 pof.usertime
                         from	pof with (nolock)
                         where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
-                                pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'";
+                                pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
             if (!empty($request->get('salesman')) && trim($request->get('salesman')) != '') {
                 $sql .= " and pof.kd_sales='".strtoupper(trim($request->get('salesman')))."'";
@@ -361,21 +361,21 @@ class PofController extends Controller
                                 pof.kd_tpc, pof.disc, faktur_discnol.kd_dealer as kd_dealer_discnol,
                                 company.kd_file
                         from	pof with (nolock)
-                                    left join company with (nolock) on pof.companyid=company.companyid 
+                                    left join company with (nolock) on pof.companyid=company.companyid
                                     left join faktur_discnol with (nolock) on pof.kd_dealer=faktur_discnol.kd_dealer and
                                                 pof.companyid=faktur_discnol.companyid
                         where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
-                                pof.companyid='".strtoupper(trim($request->userlogin->companyid))."'
+                                pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
                     )	pof
-                            left join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_order and
+                            left join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
                                         pof.companyid=pof_dtl.companyid";
 
-            $result_check_disc = DB::connection($request->get('divisi'))->select($sql);
+            $result = DB::connection($request->get('divisi'))->select($sql);
 
             $jumlah_data = 0;
             $user_entry = '';
 
-            foreach($result_check_disc as $data) {
+            foreach($result as $data) {
                 $jumlah_data = (double)$jumlah_data + 1;
 
                 $user_entry = strtoupper(trim($data->user_entry));
@@ -387,7 +387,6 @@ class PofController extends Controller
                         }
                     }
                 }
-                
 
                 if(trim($data->kode_tpc) == '14') {
                     if(trim($data->kode_dealer_disc_nol) == '') {
@@ -395,6 +394,15 @@ class PofController extends Controller
                             if((double)$data->disc_detail <= 0) {
                                 return ApiResponse::responseWarning('Nomor pof tidak dapat di approve karena ada part number yang belum di discount');
                             }
+                        }
+                    }
+                }
+
+                if(trim($data->kode_tpc) == '20') {
+                    if((double)$data->disc_header > 0) {
+                        if((double)$data->disc_detail > 0) {
+                            return ApiResponse::responseWarning('Nomor pof tidak dapat di approve karena ada diskon di part number '.strtoupper(trim($data->part_numbner)).'\n'.
+                                                            'Kode TPC 20 tidak boleh ada diskon');
                         }
                     }
                 }
@@ -407,8 +415,8 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))
                     ->insert('exec SP_Pof_Approve ?,?,?', [
-                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->user_id)),
-                        strtoupper(trim($request->userlogin->companyid))
+                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin['user_id'])),
+                        strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -441,7 +449,7 @@ class PofController extends Controller
                         'title'         => 'Approved Purchase Order Form',
                         'message'       => 'Nomor order '.strtoupper(trim($request->get('nomor_pof'))).' anda sudah di approve oleh supervisor',
                         'code'          => strtoupper(trim($request->get('nomor_pof'))),
-                        'user_process'  => strtoupper(trim($request->userlogin->user_id)),
+                        'user_process'  => strtoupper(trim($request->userlogin['user_id'])),
                         'divisi'        => $request->get('divisi')
                     ];
                     ApiRequest::requestPost($url, $header, $body);
@@ -476,7 +484,7 @@ class PofController extends Controller
                                 isnull(pof.approve, 0) as approved,
                                 isnull(pof.user_entry, '') as user_entry")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -488,8 +496,8 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))
                     ->insert('exec SP_Pof_BatalApprove ?,?,?', [
-                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->user_id)),
-                        strtoupper(trim($request->userlogin->companyid))
+                        strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin['user_id'])),
+                        strtoupper(trim($request->userlogin['companyid']))
                     ]);
             });
 
@@ -522,7 +530,7 @@ class PofController extends Controller
                         'title'         => 'Cancel Approve Purchase Order Form',
                         'message'       => 'Status approve nomor order '.strtoupper(trim($request->get('nomor_pof'))).' di cancel oleh supervisor',
                         'code'          => strtoupper(trim($request->get('nomor_pof'))),
-                        'user_process'  => strtoupper(trim($request->userlogin->user_id)),
+                        'user_process'  => strtoupper(trim($request->userlogin['user_id'])),
                         'divisi'        => $request->get('divisi')
                     ];
                     ApiRequest::requestPost($url, $header, $body);
@@ -557,7 +565,7 @@ class PofController extends Controller
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -574,8 +582,8 @@ class PofController extends Controller
                         ->insert('exec SP_Pof_UpdateTpc ?,?,?,?', [
                             strtoupper(trim($request->get('nomor_pof'))),
                             strtoupper(trim($request->get('tpc'))),
-                            strtoupper(trim($request->userlogin->user_id)),
-                            strtoupper(trim($request->userlogin->companyid))
+                            strtoupper(trim($request->userlogin['user_id'])),
+                            strtoupper(trim($request->userlogin['companyid']))
                         ]);
                 });
             }
@@ -604,7 +612,7 @@ class PofController extends Controller
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -619,7 +627,7 @@ class PofController extends Controller
                 DB::connection($request->get('divisi'))->update('update pof set bo=? where no_pof=? and companyid=?', [
                     strtoupper(trim($request->get('status_bo'))),
                     strtoupper(trim($request->get('nomor_pof'))),
-                    strtoupper(trim($request->userlogin->companyid)),
+                    strtoupper(trim($request->userlogin['companyid'])),
                 ]);
             });
 
@@ -646,7 +654,7 @@ class PofController extends Controller
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -665,7 +673,7 @@ class PofController extends Controller
                                     tgl_akhir_pof=convert(varchar(10),dateadd(day,'.(int)$umur_pof.',pof.tgl_pof), 120)
                             where   no_pof=? and companyid=?', [
                     (int)$umur_pof, strtoupper(trim($request->get('nomor_pof'))),
-                    strtoupper(trim($request->userlogin->companyid)),
+                    strtoupper(trim($request->userlogin['companyid'])),
                 ]);
             });
 
@@ -691,7 +699,7 @@ class PofController extends Controller
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -706,7 +714,7 @@ class PofController extends Controller
                 DB::connection($request->get('divisi'))->update('update pof set ket=? where no_pof=? and companyid=?', [
                     strtoupper(trim($request->get('keterangan'))),
                     strtoupper(trim($request->get('nomor_pof'))),
-                    strtoupper(trim($request->userlogin->companyid)),
+                    strtoupper(trim($request->userlogin['companyid'])),
                 ]);
             });
 
@@ -733,7 +741,7 @@ class PofController extends Controller
                     ->selectRaw("isnull(pof.no_pof, '') as nomor_pof,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -754,7 +762,7 @@ class PofController extends Controller
                 DB::connection($request->get('divisi'))->insert('exec SP_Pof_UpdateDiscount ?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))),
                     (double)str_replace(',','.',$request->get('discount')),
-                    strtoupper(trim($request->userlogin->companyid))
+                    strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -781,7 +789,7 @@ class PofController extends Controller
                                 isnull(pof.kd_tpc, '') as kode_tpc,
                                 isnull(pof.approve, 0) as approved")
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -794,7 +802,7 @@ class PofController extends Controller
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_Pof_Hapus ?,?', [
-                    strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin->companyid))
+                    strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -828,7 +836,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -853,7 +861,7 @@ class PofController extends Controller
                         $join->on('company.companyid', '=', 'part.companyid');
                     })
                     ->where('part.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('part.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('part.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->part_number) || trim($sql->part_number) == '') {
@@ -875,8 +883,8 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateHarga ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)str_replace(',','.',$request->get('harga')), strtoupper(trim($request->userlogin->user_id)),
-                    strtoupper(trim($request->userlogin->companyid))
+                    (double)str_replace(',','.',$request->get('harga')), strtoupper(trim($request->userlogin['user_id'])),
+                    strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -909,7 +917,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -923,8 +931,8 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateJmlOrder ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)str_replace(',','.',$request->get('quantity')), strtoupper(trim($request->userlogin->user_id)),
-                    strtoupper(trim($request->userlogin->companyid))
+                    (double)str_replace(',','.',$request->get('quantity')), strtoupper(trim($request->userlogin['user_id'])),
+                    strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -958,7 +966,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -982,8 +990,8 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_UpdateDiscDetail ?,?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    (double)str_replace(',','.',$request->get('discount')), strtoupper(trim($request->userlogin->user_id)),
-                    strtoupper(trim($request->userlogin->companyid))
+                    (double)str_replace(',','.',$request->get('discount')), strtoupper(trim($request->userlogin['user_id'])),
+                    strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
@@ -1016,7 +1024,7 @@ class PofController extends Controller
                     })
                     ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.kd_part', strtoupper(trim($request->get('part_number'))))
-                    ->where('pof.companyid', strtoupper(trim($request->userlogin->companyid)))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->first();
 
             if(empty($sql->nomor_pof) || trim($sql->nomor_pof) == '') {
@@ -1031,7 +1039,7 @@ class PofController extends Controller
             DB::connection($request->get('divisi'))->transaction(function () use ($request) {
                 DB::connection($request->get('divisi'))->insert('exec SP_PofDtl_HapusPart ?,?,?,?', [
                     strtoupper(trim($request->get('nomor_pof'))), strtoupper(trim($request->get('part_number'))),
-                    strtoupper(trim($request->userlogin->user_id)), strtoupper(trim($request->userlogin->companyid))
+                    strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($request->userlogin['companyid']))
                 ]);
             });
 
