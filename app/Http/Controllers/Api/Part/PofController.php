@@ -354,7 +354,7 @@ class PofController extends Controller
                             isnull(pof.kd_dealer_discnol, '') as kode_dealer_disc_nol,
                             isnull(pof.kd_tpc, '') as kode_tpc, isnull(pof_dtl.kd_part, '') as part_number,
                             isnull(pof.disc, 0) as disc_header, isnull(pof_dtl.disc1, 0) as disc_detail,
-                            isnull(pof.user_entry, '') as user_entry, isnull(company.kd_file, '') as kode_file
+                            isnull(pof.user_entry, '') as user_entry, isnull(pof.kd_file, '') as kode_file
                     from
                     (
                         select	top 1 pof.companyid, pof.no_pof, pof.kd_sales, pof.kd_dealer, pof.user_entry,
