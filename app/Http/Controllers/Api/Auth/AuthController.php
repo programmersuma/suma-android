@@ -144,9 +144,9 @@ class AuthController extends Controller {
                 return ApiResponse::responseWarning('Alamat email atau password salah');
             }
 
-            // if(!Auth::attempt(['email' => $sql->email, 'password' => $request->password])) {
-            //     return ApiResponse::responseWarning('Alamat email atau password salah [0]');
-            // }
+            if(!Hash::check($request->get('password'), $sql->password)) {
+                return ApiResponse::responseWarning('Alamat email atau password salah');
+            }
 
             $token = $request->header('Authorization');
             $formatToken = explode(" ", $token);
