@@ -158,9 +158,9 @@ class AuthController extends Controller {
 
             DB::connection($request->get('divisi'))->transaction(function () use ($request, $sql, $access_token) {
                 DB::connection($request->get('divisi'))
-                    ->insert('exec SP_UserApiSession_Simpan ?,?,?,?,?,?,?', [
+                    ->insert('exec SP_UserApiSession_Simpan1 ?,?,?,?,?,?,?,?', [
                         $access_token, $request->get('regid'), strtoupper(trim($sql->user_id)), 'Suma API - Android',
-                        $request->ip(), strtoupper(trim($sql->id)), strtoupper(trim($sql->companyid))
+                        $request->ip(), strtoupper(trim($sql->id)), $request->get('version'), strtoupper(trim($sql->companyid))
                     ]
                 );
             });

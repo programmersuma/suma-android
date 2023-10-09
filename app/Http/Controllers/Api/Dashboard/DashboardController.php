@@ -412,10 +412,14 @@ class DashboardController extends Controller
         // ====================================================================================
         // Ranking Salesman
         // ====================================================================================
-        $sql = "select	isnull(salesman.id_sales, 0) as id, isnull(salesman_rank.rank, 0) as rank,
-                        isnull(rtrim(users.photo), '') as photo, isnull(rtrim(salesman.kd_sales), '') as code,
-                        isnull(rtrim(salesman.nm_sales), '') as name, isnull(salesman_rank.type, '') as type,
-                        isnull(salesman_rank.peringkat, '') as peringkat,
+        $sql = "select	isnull(salesman.id_sales, 0) as id,
+                        isnull(salesman_rank.rank, 0) as rank,
+                        isnull(rtrim(users.role_id), '') as role_id,
+                        isnull(rtrim(users.photo), '') as photo,
+                        isnull(rtrim(salesman.kd_sales), '') as code,
+                        isnull(rtrim(salesman.nm_sales), '') as name,
+                        isnull(salesman_rank.type, '') as type,
+                        isnull(salesman_rank.peringkat, '') as status,
                         isnull(salesman_rank.target, 0) as target,
                         isnull(salesman_rank.amount, 0) - isnull(salesman_rank.retur, 0) as omzet,
                         isnull(salesman_rank.prosentase, 0) as prosentase
@@ -462,9 +466,10 @@ class DashboardController extends Controller
                         'id'        => (int)$data->id,
                         'rank'      => (int)$data->rank,
                         'photo'     => (!empty($data->photo) && $data->photo != '') ? trim($data->photo) : $photo_default,
-                        'name'      => trim($data->code).' ~ '.trim($data->name),
+                        'name'      => trim($data->code).' • '.trim($data->name),
                         'type'      => trim($data->type),
-                        'peringkat' => trim($data->peringkat),
+                        'peringkat' => 'Peringkat '.$data->rank,
+                        'status'    => trim($data->status),
                         'keterangan' => trim($prosentase)
                     ]);
                 }
@@ -474,9 +479,10 @@ class DashboardController extends Controller
                 'id'        => (int)$data->id,
                 'rank'      => (int)$data->rank,
                 'photo'     => (!empty($data->photo) && $data->photo != '') ? trim($data->photo) : $photo_default,
-                'name'      => trim($data->code).' ~ '.trim($data->name),
+                'name'      => trim($data->code).' • '.trim($data->name),
                 'type'      => trim($data->type),
-                'peringkat' => trim($data->peringkat),
+                'peringkat' => 'Peringkat '.$data->rank,
+                'status'    => trim($data->status),
                 'keterangan' => trim($prosentase)
             ];
         }
@@ -490,8 +496,9 @@ class DashboardController extends Controller
                 'photo'     => (!empty($data->photo) && $data->photo != '') ? trim($data->photo) : $photo_default,
                 'name'      => strtoupper(trim($user_id)),
                 'type'      => "Bertahan",
-                'peringkat' => "Bertahan",
-                'keterangan' => "-",
+                'peringkat' => "∞",
+                'status'    => "Bertahan",
+                'keterangan' => strtoupper(trim($role_id)),
             ]);
         }
 
@@ -824,10 +831,14 @@ class DashboardController extends Controller
         // ====================================================================================
         // Ranking Salesman
         // ====================================================================================
-        $sql = "select	isnull(salesman.id_sales, 0) as id, isnull(salesman_rank.rank, 0) as rank,
-                        isnull(rtrim(users.photo), '') as photo, isnull(rtrim(salesman.kd_sales), '') as code,
-                        isnull(rtrim(salesman.nm_sales), '') as name, isnull(salesman_rank.type, '') as type,
-                        isnull(salesman_rank.peringkat, '') as peringkat,
+        $sql = "select	isnull(salesman.id_sales, 0) as id,
+                        isnull(salesman_rank.rank, 0) as rank,
+                        isnull(rtrim(users.role_id), '') as role_id,
+                        isnull(rtrim(users.photo), '') as photo,
+                        isnull(rtrim(salesman.kd_sales), '') as code,
+                        isnull(rtrim(salesman.nm_sales), '') as name,
+                        isnull(salesman_rank.type, '') as type,
+                        isnull(salesman_rank.peringkat, '') as status,
                         isnull(salesman_rank.target, 0) as target,
                         isnull(salesman_rank.amount, 0) - isnull(salesman_rank.retur, 0) as omzet,
                         isnull(salesman_rank.prosentase, 0) as prosentase
@@ -874,9 +885,10 @@ class DashboardController extends Controller
                         'id'        => (int)$data->id,
                         'rank'      => (int)$data->rank,
                         'photo'     => (!empty($data->photo) && $data->photo != '') ? trim($data->photo) : $photo_default,
-                        'name'      => trim($data->code).' ~ '.trim($data->name),
+                        'name'      => trim($data->code).' • '.trim($data->name),
                         'type'      => trim($data->type),
-                        'peringkat' => trim($data->peringkat),
+                        'peringkat' => 'Peringkat '.$data->rank,
+                        'status'    => trim($data->status),
                         'keterangan' => trim($prosentase)
                     ]);
                 }
@@ -886,9 +898,10 @@ class DashboardController extends Controller
                 'id'        => (int)$data->id,
                 'rank'      => (int)$data->rank,
                 'photo'     => (!empty($data->photo) && $data->photo != '') ? trim($data->photo) : $photo_default,
-                'name'      => trim($data->code).' ~ '.trim($data->name),
+                'name'      => trim($data->code).' • '.trim($data->name),
                 'type'      => trim($data->type),
-                'peringkat' => trim($data->peringkat),
+                'peringkat' => 'Peringkat '.$data->rank,
+                'status'    => trim($data->status),
                 'keterangan' => trim($prosentase)
             ];
         }
@@ -902,21 +915,9 @@ class DashboardController extends Controller
                 'photo'     => (!empty($data->photo) && $data->photo != '') ? trim($data->photo) : $photo_default,
                 'name'      => strtoupper(trim($user_id)),
                 'type'      => "Bertahan",
-                'peringkat' => "Bertahan",
-                'keterangan' => "-",
-            ]);
-        }
-
-        $kode_my_rank = $data_my_rank->first();
-
-        if (empty($kode_my_rank)) {
-            $data_my_rank->push((object) [
-                'id'        => (int)$id_user,
-                'rank'      => 0,
-                'photo'     => (!empty($data->photo) && $data->photo != '') ? trim($data->photo) : $photo_default,
-                'name'      => strtoupper(trim($user_id)),
-                'type'      => "Bertahan",
-                'peringkat' => "Bertahan"
+                'peringkat' => "∞",
+                'status'    => "Bertahan",
+                'keterangan' => strtoupper(trim($role_id)),
             ]);
         }
 

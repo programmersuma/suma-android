@@ -82,7 +82,7 @@ class PofController extends Controller
                                     convert(varchar, getdate(), 114) as order_date,
                                 isnull(pof.kd_sales, '') as sales_code, isnull(salesman.nm_sales, '') as sales_name,
                                 isnull(pof.kd_dealer, '') as dealer_code, isnull(dealer.nm_dealer, '') as dealer_name,
-                                isnull(pof.umur_pof, 0) as umur_pof,
+                                isnull(pof.umur_pof, 0) as umur_pof, isnull(pof.ket, '') as keterangan,
                                 isnull(convert(varchar, pof.tgl_akhir_pof, 107), '') as jatuh_tempo,
                                 isnull(pof.kd_tpc, '') as 'tpc', isnull(pof.disc, 0) as discount_header,
                                 isnull(pof.bo, 'T') as 'status_bo', isnull(pof.total, 0) as 'total',
@@ -92,7 +92,7 @@ class PofController extends Controller
                         (
                             select	pof.companyid, pof.no_pof, pof.tgl_pof, pof.kd_sales, pof.kd_dealer,
                                     pof.umur_pof, pof.tgl_akhir_pof, pof.bo, pof.approve, pof.appr_usr,
-                                    pof.kd_tpc, pof.disc, pof.total, pof.sts_fakt, pof.usertime
+                                    pof.ket, pof.kd_tpc, pof.disc, pof.total, pof.sts_fakt, pof.usertime
                             from	pof with (nolock)
                             where	pof.no_pof in (".$nomor_pof_result.") and
                                     pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
@@ -115,10 +115,12 @@ class PofController extends Controller
                         'dealer_name'       => strtoupper(trim($result->dealer_name)),
                         'umur_pof'          => (double)$result->umur_pof.' Hari',
                         'tanggal_jatuh_tempo' => trim($result->jatuh_tempo),
+                        'keterangan'        => trim($result->keterangan),
                         'tpc'               => (int)$result->tpc,
                         'status_bo'         => (strtoupper(trim($result->status_bo)) == 'B') ? 'BACK ORDER' : 'TIDAK BO',
                         'discount_header'   => (double)$result->discount_header,
                         'total'             => (double)$result->total,
+                        'keterangan'        => trim($result->keterangan),
                         'approve'           => (int)$result->approve,
                         'approve_user'      => strtoupper(trim($result->approve_user)),
                         'on_faktur'         => (int)$result->status_faktur,
@@ -148,8 +150,8 @@ class PofController extends Controller
                             isnull(pof.kd_sales, '') as sales_code, isnull(salesman.nm_sales, '') as sales_name,
                             isnull(pof.kd_dealer, '') as dealer_code, isnull(dealer.nm_dealer, '') as dealer_name,
                             isnull(pof.ket, '') as keterangan, isnull(pof.kd_tpc, '') as tpc_code,
-                            isnull(pof.umur_pof, 0) as umur_pof, isnull(pof.bo, '') as bo,
-                            isnull(pof.disc, 0) as disc_header, isnull(pof.total, 0) as total,
+                            isnull(pof.umur_pof, 0) as umur_pof, isnull(pof.tgl_akhir_pof, '') as tanggal_jatuh_tempo,
+                            isnull(pof.bo, '') as bo, isnull(pof.disc, 0) as disc_header, isnull(pof.total, 0) as total,
                             isnull(pof.approve, 0) as approve, isnull(pof.appr_usr, '') as approve_user,
                             isnull(pof.sts_fakt, '') as status_faktur_header, isnull(pof_dtl.kd_part, '') as part_number,
                             isnull(part.ket, '') as part_description, isnull(produk.nama, '') as item_group,
@@ -266,22 +268,23 @@ class PofController extends Controller
                 }
 
                 $data_order->push((object) [
-                    'order_code'    => strtoupper(trim($result->order_code)),
-                    'order_date'    => strtoupper(trim($result->order_date)),
-                    'sales_code'    => strtoupper(trim($result->sales_code)),
-                    'sales_name'    => strtoupper(trim($result->sales_name)),
-                    'dealer_code'   => strtoupper(trim($result->dealer_code)),
-                    'dealer_name'   => strtoupper(trim($result->dealer_name)),
-                    'keterangan'    => strtoupper(trim($result->keterangan)),
-                    'tpc_code'      => strtoupper(trim($result->tpc_code)),
-                    'umur_pof'      => (double)$result->umur_pof,
-                    'back_order'    => (strtoupper(trim($result->bo)) == 'B') ? 'BACK ORDER' : 'TIDAK BO',
-                    'discount'      => (double)$result->disc_header,
-                    'total'         => (double)$result->total,
-                    'approve'       => (int)$result->approve,
-                    'approve_user'  => strtoupper(trim($result->approve_user)),
-                    'usertime'      => strtoupper(trim($result->usertime)),
-                    'status_faktur' => (int)$result->status_faktur_header,
+                    'order_code'            => strtoupper(trim($result->order_code)),
+                    'order_date'            => strtoupper(trim($result->order_date)),
+                    'sales_code'            => strtoupper(trim($result->sales_code)),
+                    'sales_name'            => strtoupper(trim($result->sales_name)),
+                    'dealer_code'           => strtoupper(trim($result->dealer_code)),
+                    'dealer_name'           => strtoupper(trim($result->dealer_name)),
+                    'keterangan'            => strtoupper(trim($result->keterangan)),
+                    'tpc_code'              => strtoupper(trim($result->tpc_code)),
+                    'umur_pof'              => (double)$result->umur_pof,
+                    'tanggal_jatuh_tempo'   => trim($result->tanggal_jatuh_tempo),
+                    'back_order'            => (strtoupper(trim($result->bo)) == 'B') ? 'BACK ORDER' : 'TIDAK BO',
+                    'discount'              => (double)$result->disc_header,
+                    'total'                 => (double)$result->total,
+                    'approve'               => (int)$result->approve,
+                    'approve_user'          => strtoupper(trim($result->approve_user)),
+                    'usertime'              => strtoupper(trim($result->usertime)),
+                    'status_faktur'         => (int)$result->status_faktur_header,
                 ]);
 
                 $data_detail_order[] = [
@@ -307,23 +310,24 @@ class PofController extends Controller
 
             foreach($data_order as $data) {
                 $result_order->push((object) [
-                    'order_code'    => strtoupper(trim($data->order_code)),
-                    'order_date'    => strtoupper(trim($data->order_date))." ".date('h:i:s'),
-                    'sales_code'    => strtoupper(trim($data->sales_code)),
-                    'sales_name'    => strtoupper(trim($data->sales_name)),
-                    'dealer_code'   => strtoupper(trim($data->dealer_code)),
-                    'dealer_name'   => strtoupper(trim($data->dealer_name)),
-                    'keterangan'    => strtoupper(trim($data->keterangan)),
-                    'tpc_code'      => strtoupper(trim($data->tpc_code)),
-                    'umur_pof'      => (double)$data->umur_pof,
-                    'back_order'    => strtoupper(trim($data->back_order)),
-                    'discount'      => (double)$data->discount,
-                    'total'         => (double)$data->total,
-                    'approve'       => (int)$data->approve,
-                    'approve_user'  => strtoupper(trim($data->approve_user)),
-                    'usertime'      => strtoupper(trim($data->usertime)),
-                    'status_faktur' => (int)$data->status_faktur,
-                    'detail'        => $data_detail_order
+                    'order_code'            => strtoupper(trim($data->order_code)),
+                    'order_date'            => strtoupper(trim($data->order_date))." ".date('h:i:s'),
+                    'sales_code'            => strtoupper(trim($data->sales_code)),
+                    'sales_name'            => strtoupper(trim($data->sales_name)),
+                    'dealer_code'           => strtoupper(trim($data->dealer_code)),
+                    'dealer_name'           => strtoupper(trim($data->dealer_name)),
+                    'keterangan'            => strtoupper(trim($data->keterangan)),
+                    'tpc_code'              => strtoupper(trim($data->tpc_code)),
+                    'tanggal_jatuh_tempo'   => strtoupper(trim($data->tanggal_jatuh_tempo))." ".date('h:i:s'),
+                    'umur_pof'              => (double)$data->umur_pof,
+                    'back_order'            => strtoupper(trim($data->back_order)),
+                    'discount'              => (double)$data->discount,
+                    'total'                 => (double)$data->total,
+                    'approve'               => (int)$data->approve,
+                    'approve_user'          => strtoupper(trim($data->approve_user)),
+                    'usertime'              => strtoupper(trim($data->usertime)),
+                    'status_faktur'         => (int)$data->status_faktur,
+                    'detail'                => $data_detail_order
                 ]);
             }
 
