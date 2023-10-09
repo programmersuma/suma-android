@@ -67,6 +67,7 @@ class AuthController extends Controller {
                 'email'     => $request->get('email'),
                 'password'  => $request->get('password'),
                 'regid'     => $request->get('regid'),
+                'version'   => $request->get('version'),
                 'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
