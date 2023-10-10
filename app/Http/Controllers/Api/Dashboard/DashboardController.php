@@ -831,43 +831,199 @@ class DashboardController extends Controller
         // ====================================================================================
         // Ranking Salesman
         // ====================================================================================
-        $sql = "select	isnull(salesman.id_sales, 0) as id,
-                        isnull(salesman_rank.rank, 0) as rank,
+        $sql = "select	isnull(ranking.id_sales, 0) as id,
+                        isnull(ranking.ranking_produk, 0) as rank,
                         isnull(rtrim(users.role_id), '') as role_id,
                         isnull(rtrim(users.photo), '') as photo,
-                        isnull(rtrim(salesman.kd_sales), '') as code,
-                        isnull(rtrim(salesman.nm_sales), '') as name,
+                        isnull(rtrim(ranking.kd_sales), '') as code,
+                        isnull(rtrim(ranking.nm_sales), '') as name,
                         isnull(salesman_rank.type, '') as type,
                         isnull(salesman_rank.peringkat, '') as status,
-                        isnull(salesman_rank.target, 0) as target,
-                        isnull(salesman_rank.amount, 0) - isnull(salesman_rank.retur, 0) as omzet,
-                        isnull(salesman_rank.prosentase, 0) as prosentase
+                        isnull(ranking.target_pcs, 0) as target,
+                        isnull(ranking.omzet_pcs, 0) as omzet,
+                        isnull(ranking.prosentase_pcs, 0) as prosentase
                 from
                 (
-                    select	salesman_rank.companyid, salesman_rank.tahun, salesman_rank.bulan,
-                            salesman_rank.rank, salesman_rank.kd_sales, salesman_rank.target,
-                            salesman_rank.amount, salesman_rank.retur, salesman_rank.prosentase,
-                            salesman_rank.type, salesman_rank.peringkat
-                    from	salesman_rank with (nolock)
-                    where	salesman_rank.tahun='".$year."' and salesman_rank.bulan='".$month."' and
-                            salesman_rank.companyid='".strtoupper(trim($companyid))."' and
-                            (isnull(salesman_rank.amount, 0) - isnull(salesman_rank.retur, 0) > 0 or isnull(salesman_rank.target, 0) > 0)";
+                    select	isnull(ranking.companyid, '') as companyid, isnull(ranking.id_sales, 0) as id_sales,
+                            isnull(ranking.kd_sales, '') as kd_sales, isnull(ranking.nm_sales, '') as nm_sales,
+                            isnull(ranking.target_pcs, 0) as target_pcs,
+                            isnull(ranking.penjualan_pcs, 0) as penjualan_pcs, isnull(ranking.retur_pcs, 0) as retur_pcs,
+                            isnull(ranking.omzet_pcs, 0) as omzet_pcs, isnull(ranking.prosentase_pcs, 0) as prosentase_pcs,
+                            isnull(ranking.bo_pcs, 0) as bo_pcs, isnull(ranking.service_rate, 0) as service_rate,
+                            row_number() over(order by isnull(ranking.prosentase_pcs, 0) desc) as ranking_produk
+                    from
+                    (
+                        select	isnull(salesman.companyid, '') as 'companyid',
+                                isnull(salesman.id_sales, 0) as 'id_sales',
+                                isnull(salesman.kd_sales, '') as 'kd_sales',
+                                isnull(salesman.nm_sales, '') as 'nm_sales',
+                                cast(isnull(sum(target_jual.pcs_target_total), 0) as decimal(18,0)) as 'target_pcs',
+                                cast(isnull(sum(faktur.pcs_faktur_total), 0) as decimal(18,0)) as 'penjualan_pcs',
+                                cast(isnull(sum(retur.pcs_total), 0) as decimal(18,0)) as 'retur_pcs',
+                                cast(isnull(sum(faktur.pcs_faktur_total), 0) - isnull(sum(retur.pcs_total), 0) as decimal(18,0)) as 'omzet_pcs',
+                                cast(iif(isnull(sum(target_jual.pcs_target_total), 0) <= 0, 0,
+                                    ((isnull(sum(faktur.pcs_faktur_total), 0) - isnull(sum(retur.pcs_total), 0)) / isnull(sum(target_jual.pcs_target_total), 0))) * 100 as decimal(5,2)) as 'prosentase_pcs',
+                                isnull(sum(bo.jumlah_bo), 0) as 'bo_pcs',
+                                iif((isnull(sum(faktur.pcs_faktur_total), 0) - isnull(sum(retur.pcs_total), 0)) + isnull(sum(bo.jumlah_bo), 0) <= 0, 0,
+                                    round(((isnull(sum(faktur.pcs_faktur_total), 0) - isnull(sum(retur.pcs_total), 0)) / ((isnull(sum(faktur.pcs_faktur_total), 0) - isnull(sum(retur.pcs_total), 0)) + isnull(sum(bo.jumlah_bo), 0))) * 100, 2)) as 'service_rate'
+                        from
+                        (
+                            select	'Omzet' as 'report', produk.kd_produk, produk.nama
+                            from	produk with (nolock) ";
+
+        if(!empty($item_group) && $item_group != '0' && $item_group != '') {
+            $sql .= " where produk.id_mobile='".$item_group."'";
+        }
+
+        $sql .= " )	produk
+                        left join
+                        (
+                            select	'Omzet' as 'report', salesman.companyid, salesman.kd_sales,
+                                    salesman.id_sales, salesman.nm_sales
+                            from	salesman with (nolock)
+                            where	salesman.companyid='".strtoupper(trim($companyid))."'";
 
         if(strtoupper(trim($role_id)) == 'MD_H3_SM') {
-            $sql .= " and salesman_rank.kd_sales='".strtoupper(trim($kode_mkr))."'";
+            $sql .= " and salesman.kd_sales='".strtoupper(trim($kode_mkr))."'";
+        } elseif(strtoupper(trim($role_id)) == 'MD_H3_KORSM') {
+            $sql .= " and salesman.spv='".strtoupper(trim($kode_mkr))."'";
         }
 
-        $sql .= " )	salesman_rank
-                        left join salesman with (nolock) on salesman_rank.kd_sales=salesman.kd_sales and
-                                    salesman_rank.companyid=salesman.companyid
-                        left join users with (nolock) on salesman_rank.kd_sales=users.user_id and
-                                    salesman_rank.companyid=users.companyid";
+        $sql .= " )	salesman on produk.report=salesman.report
+                        left join
+                        (
+                            select	target_jual.companyid, target_jual.kd_produk, target_jual.kd_sales,
+                                    sum(target_jual.target_pcs) As 'pcs_target_total'
+                            from
+                            (
+                                select	target_jual.companyid, target_jual.kd_sales, target_jual.kd_produk,
+                                        iif('MD_H3_SM'='MD_H3_SM', target_jual.target, target_jual.target3) as 'target_amount',
+                                        iif('MD_H3_SM'='MD_H3_SM', target_jual.target2, target_jual.target4) as 'target_pcs'
+                                from	target_jual with (nolock)
+                                            left join salesman with (nolock) on target_jual.kd_sales=salesman.kd_sales and
+                                                        target_jual.companyid=salesman.companyid
+                                            left join produk with (nolock) on target_jual.kd_produk=produk.kd_produk
+                                where	target_jual.companyid='".strtoupper(trim($companyid))."' and
+                                        target_jual.tahun='".trim($year)."' and
+                                        target_jual.bulan='".trim($month)."'";
 
-        if(strtoupper(trim($role_id)) == 'MD_H3_KORSM') {
-            $sql .= " where salesman.spv='".strtoupper(trim($kode_mkr))."'";
+        if(strtoupper(trim($role_id)) == 'MD_H3_SM') {
+            $sql .= " and target_jual.kd_sales='".strtoupper(trim($kode_mkr))."'";
+        } elseif(strtoupper(trim($role_id)) == 'MD_H3_KORSM') {
+            $sql .= " and salesman.spv='".strtoupper(trim($kode_mkr))."'";
         }
 
-        $sql .= " order by isnull(salesman_rank.rank, 0) asc";
+        if(!empty($item_group) && $item_group != '0' && $item_group != '') {
+            $sql .= " and produk.id_mobile='".$item_group."'";
+        }
+
+        $sql .= " )	target_jual
+                                    left join produk with (nolock) on target_jual.kd_produk=produk.kd_produk
+                            where   target_jual.companyid is not null
+                            group by target_jual.companyid, target_jual.kd_produk, target_jual.kd_sales
+                        )	target_jual on salesman.companyid=target_jual.companyid and
+                                            salesman.kd_sales=target_jual.kd_sales and
+                                            produk.kd_produk=target_jual.kd_produk
+                        left join
+                        (
+                            select	faktur.companyid, faktur.kd_sales, produk.kd_produk,
+                                    sum(fakt_dtl.jml_jual) as 'pcs_faktur_total'
+                            from
+                            (
+                                select	faktur.companyid, faktur.no_faktur, faktur.kd_sales
+                                from	faktur with (nolock)
+                                            left join salesman with (nolock) on faktur.kd_sales=salesman.kd_sales and
+                                                        faktur.companyid=salesman.companyid
+                                where	year(faktur.tgl_faktur)='".trim($year)."' and
+                                        month(faktur.tgl_faktur)='".trim($month)."' and
+                                        faktur.companyid='".strtoupper(trim($companyid))."'";
+
+        if(strtoupper(trim($role_id)) == 'MD_H3_SM') {
+            $sql .= " and faktur.kd_sales='".strtoupper(trim($kode_mkr))."'";
+        } elseif(strtoupper(trim($role_id)) == 'MD_H3_KORSM') {
+            $sql .= " and salesman.spv='".strtoupper(trim($kode_mkr))."'";
+        }
+
+        $sql .= " )	faktur
+                                    left join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
+                                                faktur.companyid=fakt_dtl.companyid
+                                    left join part with (nolock) on fakt_dtl.kd_part=part.kd_part and
+                                                faktur.companyid=part.companyid
+                                    left join sub with (nolock) on part.kd_sub=sub.kd_sub
+                                    left join produk with (nolock) on sub.kd_produk=produk.kd_produk
+                            where	isnull(fakt_dtl.jml_jual, 0) > 0 ";
+
+        if(!empty($item_group) && $item_group != '0' && $item_group != '') {
+            $sql .= " and produk.id_mobile='".$item_group."'";
+        }
+
+        $sql .= " group by faktur.companyid, produk.kd_produk, faktur.kd_sales
+                        )	faktur on salesman.companyid=faktur.companyid and
+                                        salesman.kd_sales=faktur.kd_sales and
+                                        produk.kd_produk=faktur.kd_produk
+                        left join
+                        (
+                            select	rtoko.companyid, produk.kd_produk, rtoko.kd_sales,
+                                    sum(rtoko_dtl.jumlah) As 'pcs_total'
+                            from
+                            (
+                                select	rtoko.companyid, rtoko.no_retur, rtoko.kd_sales
+                                from	rtoko with (nolock)
+                                            left join salesman with (nolock) on rtoko.kd_sales=salesman.kd_sales and
+                                                        rtoko.companyid=salesman.companyid
+                                where	year(rtoko.tanggal)='".trim($year)."' and
+                                        month(rtoko.tanggal)='".trim($month)."' and
+                                        rtoko.companyid='".strtoupper(trim($companyid))."'
+                            )	rtoko
+                                    left join rtoko_dtl with (nolock) on rtoko.no_retur=rtoko_dtl.no_retur and
+                                                rtoko.companyid=rtoko_dtl.companyid
+                                    left join part with (nolock) on rtoko_dtl.kd_part=part.kd_part and
+                                                rtoko.companyid=part.companyid
+                                    left join sub with (nolock) on part.kd_sub=sub.kd_sub
+                                    left join produk with (nolock) on sub.kd_produk=produk.kd_produk";
+
+        if(!empty($item_group) && $item_group != '0' && $item_group != '') {
+            $sql .= " where produk.id_mobile='".$item_group."'";
+        }
+
+        $sql .= " group by rtoko.companyid, produk.kd_produk, rtoko.kd_sales
+                        )	retur on salesman.companyid=retur.companyid and
+                                    salesman.kd_sales=retur.kd_sales and
+                                    produk.kd_produk=retur.kd_produk
+                        left join
+                        (
+                            select	bo.companyid, bo.kd_sales, produk.kd_produk, sum(bo.jumlah + bo.jumlah2) as 'jumlah_bo'
+                            from	bo with (nolock)
+                                        left join salesman with (nolock) on bo.kd_sales=salesman.kd_sales and
+                                                    bo.companyid=salesman.companyid
+                                        left join part with (nolock) on bo.kd_part=part.kd_part and
+                                                    bo.companyid=part.companyid
+                                        left join sub with (nolock) on part.kd_sub=sub.kd_sub
+                                        left join produk with (nolock) on sub.kd_produk=produk.kd_produk
+                            where	bo.companyid='".strtoupper(trim($companyid))."'";
+
+        if(!empty($item_group) && $item_group != '0' && $item_group != '') {
+            $sql .= " and produk.id_mobile='".$item_group."'";
+        }
+
+        $sql .= " group by bo.companyid, bo.kd_sales, produk.kd_produk
+                        )	bo on salesman.companyid=bo.companyid and salesman.kd_sales=bo.kd_sales and
+                                    produk.kd_produk=bo.kd_produk
+                        group by salesman.companyid, salesman.kd_sales, salesman.id_sales, salesman.nm_sales
+                    )	ranking
+                )	ranking
+                        left join users with (nolock) on ranking.kd_sales=users.user_id and
+                                    ranking.companyid=users.companyid
+                        left join
+                        (
+                            select	*
+                            from	salesman_rank with (nolock)
+                            where	salesman_rank.companyid='".strtoupper(trim($companyid))."' and
+                                    salesman_rank.tahun='".trim($year)."' and
+                                    salesman_rank.bulan='".trim($month)."'
+                        )	salesman_rank on ranking.kd_sales=salesman_rank.kd_sales and
+                                        ranking.companyid=salesman_rank.companyid
+                order by ranking.ranking_produk asc";
 
         $salesman_rank = DB::connection($request->get('divisi'))->select($sql);
 
