@@ -197,10 +197,8 @@ class CartController extends Controller {
             if ($validate->fails()) {
                 return ApiResponse::responseWarning('File yang dipilih harus berformat xls atau xlsx');
             }
-
             $nama_file = date('YmdHis').'='.Str::random(10);
-            $extension = $request->file('file')->getClientOriginalExtension();
-            $request->file('file')->move('excel/upload', $nama_file.'.'.$extension);
+            $request->file('file')->move('excel/upload', $nama_file.'.xlsx');
 
             return ApiResponse::responseSuccess('success', null);
         } catch (\Exception $exception) {
