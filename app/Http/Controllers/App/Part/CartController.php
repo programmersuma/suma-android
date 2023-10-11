@@ -6,6 +6,9 @@ use App\Helpers\ApiRequest;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Validator;
 
 class CartController extends Controller {
 
@@ -182,6 +185,27 @@ class CartController extends Controller {
             return $response;
         } catch (\Exception $exception) {
             return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
+    public function uploadExcel(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'file'  => 'required|mimes:xls,xlsx'
+            ]);
+
+            if ($validate->fails()) {
+                return ApiResponse::responseWarning('File yang dipilih harus berformat xls atau xlsx');
+            }
+
+            $nama_file = date('YmdHis').'='.Str::random(10);
+            $extension = $request->file('file')->getClientOriginalExtension();
+            $request->file('file')->move('excel/upload', $nama_file.'.'.$extension);
+
+            return ApiResponse::responseSuccess('success', null);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
         }
     }
 }
