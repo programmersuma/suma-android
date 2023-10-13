@@ -28,7 +28,7 @@ use App\Http\Controllers\App\Sales\RealisasiVisitController;
 */
 
 Route::controller(CartController::class)->group(function () {
-    Route::post('cart/upload-excel', 'uploadExcel');
+    Route::post('cart/import-excel', 'importExcel');
 });
 
 // Route::get('/', function () {

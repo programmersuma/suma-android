@@ -937,7 +937,6 @@ class CartController extends Controller {
 
             if(!empty($sql->fcm_id)) {
                 if(trim($sql->fcm_id) != '') {
-
                     $credential = 'Basic '.base64_encode(trim(config('constants.api_key.api_username')).':'.trim(config('constants.app.api_key.api_password')));
                     $url = 'notification/push';
                     $header = [ 'Authorization' => $credential ];
@@ -973,5 +972,98 @@ class CartController extends Controller {
         }
     }
 
+    public function importExcel(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'imports'       => 'required',
+                'ms_dealer_id'  => 'required',
+                'divisi'        => 'required'
+            ]);
 
+            if($validate->fails()) {
+                return ApiResponse::responseWarning('Data file import, dealer Id, dan divisi tidak boleh kosong');
+            }
+
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $role_id = strtoupper(trim($request->userlogin['role_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
+
+            $kode_key = '';
+            $kode_sales = '';
+            $kode_dealer = '';
+
+            $sql = DB::table('msdealer')->lock('with (nolock)')
+                    ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer,
+                                isnull(dealer.kd_sales, '') as kode_sales")
+                    ->leftJoin(DB::raw('dealer with (nolock)'), function($join) {
+                        $join->on('dealer.kd_dealer', '=', 'msdealer.kd_dealer')
+                            ->on('dealer.companyid', '=', 'msdealer.companyid');
+                    })
+                    ->where('msdealer.id', $request->get('ms_dealer_id'))
+                    ->where('msdealer.companyid', strtoupper(trim($companyid)))
+                    ->first();
+
+            if(empty($sql->kode_dealer)) {
+                return ApiResponse::responseWarning('Dealer yang anda pilih tidak terdaftar');
+            }
+
+            $kode_dealer = strtoupper(trim($sql->kode_dealer));
+
+            if(strtoupper(trim($role_id)) == 'MD_H3_SM') {
+                $kode_sales = strtoupper(trim($user_id));
+            } else {
+                $kode_sales = strtoupper(trim($sql->kode_sales));
+            }
+
+            $kode_key = strtoupper(trim($user_id)).'/'.strtoupper(trim($kode_dealer));
+
+            $data_excel = [];
+            $data_imports = json_decode($request->get('imports'), false);
+
+            foreach($data_imports as $data) {
+                $data_excel[] = [
+                    'kd_key'    => strtoupper(trim($kode_key)),
+                    'no_order'  => strtoupper(trim($kode_key)),
+                    'pn'        => strtoupper(trim($data->part_number)),
+                    'jml_order' => (int)$data->order,
+                    'companyid' => strtoupper(trim($companyid)),
+                    'usertime'  => strtoupper(trim($user_id))
+                ];
+            }
+
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_key, $kode_sales,
+                                        $kode_dealer, $companyid, $user_id, $data_excel) {
+                DB::table('carttmp_exceltmp')->insert($data_excel);
+
+                DB::connection($request->get('divisi'))->insert("exec SP_CartTmp_ImportExcel ?,?,?,?,?,?", [
+                    strtoupper(trim($kode_key)), strtoupper(trim($kode_key)), strtoupper(trim($kode_sales)),
+                    strtoupper(trim($kode_dealer)), strtoupper(trim($companyid)),
+                    strtoupper(trim($user_id))
+                ]);
+            });
+
+            $data_result_excel = [];
+
+            $sql = DB::table('carttmp_excel')->lock('with (nolock)')
+                    ->selectRaw("isnull(carttmp_excel.pn, '') as pn,
+                                isnull(carttmp_excel.keterangan, '') as keterangan")
+                    ->where('carttmp_excel.kd_key', strtoupper(trim($kode_key)))
+                    ->where('carttmp_excel.no_order', strtoupper(trim($kode_key)))
+                    ->where('carttmp_excel.companyid', strtoupper(trim($companyid)))
+                    ->get();
+
+            $data_result_excel = $sql;
+
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $kode_key, $companyid) {
+                DB::connection($request->get('divisi'))->delete("delete from carttmp_excel where kd_key=? and companyid=?", [
+                    strtoupper(trim($kode_key)), strtoupper(trim($companyid))
+                ]);
+            });
+
+            return ApiResponse::responseSuccess('success', $data_result_excel);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
 }

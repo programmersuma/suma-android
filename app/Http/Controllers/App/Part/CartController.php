@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers\App\Part;
 
+use App\Http\Controllers\App\Imports\ExcelCartController;
 use App\Helpers\ApiRequest;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class CartController extends Controller {
 
@@ -188,22 +192,52 @@ class CartController extends Controller {
         }
     }
 
-    public function uploadExcel(Request $request) {
+    public function importExcel(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'file'  => 'required|mimes:xls,xlsx'
+                'file'          => 'required|mimes:xls,xlsx'
             ]);
 
             if ($validate->fails()) {
                 return ApiResponse::responseWarning('File yang dipilih harus berformat xls atau xlsx');
             }
-            $nama_file = date('YmdHis').'='.Str::random(10);
-            $request->file('file')->move('excel/upload', $nama_file.'.xlsx');
 
-            return ApiResponse::responseSuccess('success', null);
+            if ($request->hasFile('file') && $request->file('file')->isValid()) {
+                $dataExcel = Excel::toCollection(new ExcelCartController, $request->file('file'));
+                $data_imports = [];
+                foreach($dataExcel[0] as $data) {
+                    if(!empty($data['part_number'])) {
+                        if(!empty($data['order'])) {
+                            $data_imports[] = [
+                                'part_number'   => strtoupper(trim($data['part_number'])),
+                                'order'         => (int)$data['order'],
+                            ];
+                        }
+                    }
+                }
+                if(empty($data_imports)) {
+                    return ApiResponse::responseWarning('Header kolom excel harus mengandung kata part_number dan order');
+                }
+                $imports = json_encode($data_imports, true);
+
+                // ======================================================================================================
+                // Send data to API
+                // ======================================================================================================
+                $url = 'cart/import-excel';
+                $header = ['Authorization' => 'Bearer '.$request->get('token')];
+                $body = [
+                    'imports'       => $imports,
+                    'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                    'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+                ];
+                $response = ApiRequest::requestPost($url, $header, $body);
+
+                return $response;
+            } else {
+                return ApiResponse::responseWarning('File yang dipilih harus berformat xls atau xlsx');
+            }
         } catch (\Exception $exception) {
-            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
-                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
         }
     }
 }

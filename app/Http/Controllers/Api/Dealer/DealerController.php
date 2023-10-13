@@ -66,7 +66,8 @@ class DealerController extends Controller {
                             ->on('dealer.companyid', '=', 'dealer_fav.companyid');
                     })
                     ->where('dealer_fav.user_id', strtoupper(trim($request->userlogin['user_id'])))
-                    ->where('dealer_fav.companyid', strtoupper(trim($request->userlogin['companyid'])));
+                    ->where('dealer_fav.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->whereRaw("isnull(dealer.delsign, 0)=0");
 
             if(!empty($request->get('search')) && trim($request->get('search') != '')) {
                 $sql->where(function($query) use ($request) {
@@ -96,6 +97,7 @@ class DealerController extends Controller {
             $sql = DB::connection($request->get('divisi'))
                     ->table('dealer')->lock('with (nolock)')
                     ->selectRaw("isnull(dealer.kd_dealer, '') as kode_dealer")
+                    ->whereRaw("isnull(dealer.delsign, 0)=0")
                     ->where('dealer.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
             if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
@@ -321,22 +323,22 @@ class DealerController extends Controller {
                 return ApiResponse::responseWarning('Isi data dealer baru secara lengkap');
             }
 
-            $request->userlogin['user_id'] = $request->userlogin['user_id'];
-            $request->userlogin['companyid'] = $request->userlogin['companyid'];
+            $user_id = $request->userlogin['user_id'];
+            $companyid = $request->userlogin['companyid'];
 
             $geoLocation = explode(",", $request->get('latlong'));
             $latitude = trim($geoLocation[0]);
             $longitude = trim($geoLocation[1]);
             $code_dealer = time().'='.$request->userlogin['user_id'];
 
-            DB::connection($request->get('divisi'))->transaction(function () use ($request, $code_dealer, $latitude, $longitude) {
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $user_id, $code_dealer, $latitude, $longitude, $companyid) {
                 DB::connection($request->get('divisi'))
                     ->insert('exec SP_DealerCandidate_Simpan ?,?,?,?,?,?,?,?,?', [
-                        strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($code_dealer)),
+                        strtoupper(trim($user_id)), strtoupper(trim($code_dealer)),
                         strtoupper(trim($request->get('name'))), trim($latitude),
                         trim($longitude), strtoupper(trim($request->get('address'))),
                         strtoupper(trim($request->get('description'))),
-                        trim($request->get('phone')), strtoupper(trim($request->userlogin['companyid']))
+                        trim($request->get('phone')), strtoupper(trim($companyid))
                 ]);
             });
 
@@ -359,14 +361,14 @@ class DealerController extends Controller {
                 return ApiResponse::responseWarning('Isi data divisi dan kode dealer terlebih dahulu');
             }
 
-            $request->userlogin['user_id'] = strtoupper(trim($request->userlogin['user_id']));
-            $request->userlogin['companyid'] = strtoupper(trim($request->userlogin['companyid']));
+            $user_id = strtoupper(trim($request->userlogin['user_id']));
+            $companyid = strtoupper(trim($request->userlogin['companyid']));
 
             $result = DB::connection($request->get('divisi'))
                         ->table('dealer')->lock('with (nolock)')
                         ->select('dealer.kd_dealer')
                         ->where('dealer.kd_dealer', $request->get('kode_dealer'))
-                        ->where('dealer.companyid')
+                        ->where('dealer.companyid', $companyid)
                         ->first();
 
             if (empty($result->kd_dealer)) {
@@ -377,11 +379,11 @@ class DealerController extends Controller {
             $latitude = trim($geoLocation[0]);
             $longitude = trim($geoLocation[1]);
 
-            DB::connection($request->get('divisi'))->transaction(function () use ($request, $latitude, $longitude) {
+            DB::connection($request->get('divisi'))->transaction(function () use ($request, $latitude, $longitude, $user_id, $companyid) {
                 DB::connection($request->get('divisi'))
                     ->insert('exec SP_Dealer_UpdateLokasi ?,?,?,?,?', [
                         strtoupper(trim($request->get('kode_dealer'))), $latitude, $longitude,
-                        strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($request->userlogin['companyid']))
+                        strtoupper(trim($user_id)), strtoupper(trim($companyid))
                 ]);
             });
 

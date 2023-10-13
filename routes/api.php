@@ -77,6 +77,7 @@ Route::group(['middleware' => 'checkToken'], function() {
         Route::post('cart/update-disc-header', 'updateDiscHeader');
         Route::post('cart/update-tpc', 'updateTpc');
         Route::post('cart/submit-order', 'submitOrder');
+        Route::post('cart/import-excel', 'importExcel');
 
     });
 
