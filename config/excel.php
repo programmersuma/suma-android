@@ -294,7 +294,7 @@ return [
         | storing reading or downloading. Here you can customize that path.
         |
         */
-        'local_path'          => '/home/sumahond/suma.android/excel/upload',
+        'local_path'          => '/home/sumahond/repositories/suma-android/public/excel/upload',
 
         /*
         |--------------------------------------------------------------------------
