@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+//use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class CartController extends Controller {
 
@@ -203,7 +203,11 @@ class CartController extends Controller {
             }
 
             if ($request->hasFile('file') && $request->file('file')->isValid()) {
-                $dataExcel = Excel::toCollection(new ExcelCartController, $request->file('file'));
+                $fileName = date('YmdHis').'='.Str::random(10);
+                $request->file('file')->move('excel/upload', $fileName.'.xlsx');
+
+                $fileExcel = public_path('excel/upload/').$fileName.'.xlsx';
+                $dataExcel = Excel::toCollection(new ExcelCartController, $fileExcel);
                 $data_imports = [];
                 foreach($dataExcel[0] as $data) {
                     if(!empty($data['part_number'])) {
@@ -220,6 +224,7 @@ class CartController extends Controller {
                 }
                 $imports = json_encode($data_imports, true);
 
+                File::delete($fileExcel);
                 // ======================================================================================================
                 // Send data to API
                 // ======================================================================================================
@@ -236,6 +241,22 @@ class CartController extends Controller {
             } else {
                 return ApiResponse::responseWarning('File yang dipilih harus berformat xls atau xlsx');
             }
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
+    public function importExcelResult(Request $request) {
+        try {
+            $url = 'cart/import-excel-result';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
         } catch (\Exception $exception) {
             return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
         }

@@ -51,7 +51,7 @@ class CheckToken
                 ->first();
 
             if (empty($sql->token)) {
-                return ApiResponse::responseWarning('Token tidak ditemukan, lakukan login ulang');
+                return ApiResponse::responseWarning('Token tidak ditemukan, lakukan login ulang [0]');
             }
 
             if ((int)$sql->expired_at < time()) {

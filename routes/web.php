@@ -27,9 +27,6 @@ use App\Http\Controllers\App\Sales\RealisasiVisitController;
 |
 */
 
-Route::controller(CartController::class)->group(function () {
-    Route::post('cart/import-excel', 'importExcel');
-});
 
 // Route::get('/', function () {
 //     return view('email.forgotpassword');
@@ -78,6 +75,8 @@ Route::controller(CartController::class)->group(function () {
     Route::post('cart/update-disc-header', 'updateDiscHeader');
     Route::post('cart/update-tpc', 'updateTpc');
     Route::post('cart/submit-order', 'submitOrder');
+    Route::post('cart/import-excel', 'importExcel');
+    Route::post('cart/import-excel-result', 'importExcelResult');
 
 });
 

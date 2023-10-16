@@ -294,7 +294,7 @@ return [
         | storing reading or downloading. Here you can customize that path.
         |
         */
-        'local_path'          => public_path('assets/excel/upload'),
+        'local_path'          => public_path('excel/upload'),
 
         /*
         |--------------------------------------------------------------------------
