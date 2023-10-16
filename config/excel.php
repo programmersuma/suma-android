@@ -294,7 +294,7 @@ return [
         | storing reading or downloading. Here you can customize that path.
         |
         */
-        'local_path'          => config('constants.app.app_base_url').'/',
+        'local_path'          => public_path('excel/upload'),
 
         /*
         |--------------------------------------------------------------------------
