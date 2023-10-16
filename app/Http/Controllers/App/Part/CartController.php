@@ -205,8 +205,8 @@ class CartController extends Controller {
             if ($request->hasFile('file') && $request->file('file')->isValid()) {
                 $fileName = date('YmdHis').'='.Str::random(10);
                 $request->file('file')->move('excel/upload', $fileName.'.xls');
-                dd(public_path('excel/upload/'));
-                $fileExcel = public_path('excel/upload/').$fileName.'.xls';
+
+                $fileExcel = config('constants.app.app_base_url').'/excel/upload/'.$fileName.'.xls';
                 $dataExcel = Excel::toCollection(new ExcelCartController, $fileExcel);
                 $data_imports = [];
                 foreach($dataExcel[0] as $data) {
