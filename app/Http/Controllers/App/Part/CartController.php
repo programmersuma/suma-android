@@ -204,10 +204,10 @@ class CartController extends Controller {
 
             if ($request->hasFile('file') && $request->file('file')->isValid()) {
                 $fileName = date('YmdHis').'='.Str::random(10);
-                $request->file('file')->move(public_path('excel/upload'), $fileName.'.xlsx');
+                //$request->file('file')->move(public_path('excel/upload'), $fileName.'.xlsx');
 
-                $fileExcel = public_path('excel/upload/').$fileName.'.xlsx';
-                $dataExcel = Excel::toCollection(new ExcelCartController, $fileExcel);
+                //$fileExcel = public_path('excel/upload/').$fileName.'.xlsx';
+                $dataExcel = Excel::toCollection(new ExcelCartController, $request->file('file'));
                 $data_imports = [];
                 foreach($dataExcel[0] as $data) {
                     if(!empty($data['part_number'])) {
@@ -224,7 +224,7 @@ class CartController extends Controller {
                 }
                 $imports = json_encode($data_imports, true);
 
-                File::delete($fileExcel);
+                //File::delete($fileExcel);
                 // ======================================================================================================
                 // Send data to API
                 // ======================================================================================================
