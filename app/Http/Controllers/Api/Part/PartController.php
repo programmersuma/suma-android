@@ -1320,4 +1320,35 @@ class PartController extends Controller {
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
         }
     }
+
+    public function priceList(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required'
+            ]);
+
+            if($validate->fails()) {
+                return ApiResponse::responseWarning('Pilih data divisi terlebih dahulu');
+            }
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pricelist')->lock('with (nolock)')
+                    ->selectRaw("isnull(pricelist.tanggal, '') as tanggal,
+                                isnull(pricelist.keterangan, '') as keterangan,
+                                isnull(pricelist.nama_file, '') as nama_file,
+                                isnull(pricelist.lokasi_file, '') as lokasi_file,
+                                isnull(pricelist.ukuran_file, '') as ukuran_file")
+                    ->orderBy('pricelist.tanggal', 'desc')
+                    ->orderBy('pricelist.nama_file', 'desc')
+                    ->paginate(15);
+
+            $result = collect($sql)->toArray();
+            $data_result = $result['data'];
+
+            return ApiResponse::responseSuccess('success', $data_result);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
 }

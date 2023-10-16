@@ -103,6 +103,7 @@ Route::group(['middleware' => 'checkToken'], function() {
         Route::post('part/add-favorite', 'addPartFavorite');
         Route::post('part/list-back-order', 'listBackOrder');
         Route::post('part/skema-pembelian', 'skemaPembelian');
+        Route::post('part/price-list', 'priceList');
 
         Route::post('part/check-stock', 'partSearch');
     });

@@ -156,4 +156,20 @@ class PartController extends Controller {
             return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
         }
     }
+
+    public function priceList(Request $request) {
+        try {
+            $url = 'part/price-list';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'page'      => $request->get('page'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
 }
