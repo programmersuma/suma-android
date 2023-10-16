@@ -197,6 +197,7 @@ class CartController extends Controller {
             $validate = Validator::make($request->all(), [
                 'file'          => 'required|mimes:xls,xlsx'
             ]);
+            dd($request->file('file'));
 
             if ($validate->fails()) {
                 return ApiResponse::responseWarning('File yang dipilih harus berformat xls atau xlsx');
