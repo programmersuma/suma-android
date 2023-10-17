@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends Controller
 {
+    // private $database;
+
+    // public function __construct() {
+    //     $this->database = \App\Services\FirebaseService::connect();
+    // }
+
     public function countNotification(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
