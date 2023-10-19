@@ -1044,7 +1044,7 @@ class DashboardController extends Controller
                         'name'      => trim($data->code).' • '.trim($data->name),
                         'type'      => trim($data->type),
                         'peringkat' => 'Peringkat '.$data->rank,
-                        'status'    => trim($data->status).' (Dari Omset Global)',
+                        'status'    => trim($data->status).' (Dari Omzet Global)',
                         'keterangan' => trim($prosentase)
                     ]);
                 }
@@ -1057,7 +1057,7 @@ class DashboardController extends Controller
                 'name'      => trim($data->code).' • '.trim($data->name),
                 'type'      => trim($data->type),
                 'peringkat' => 'Peringkat '.$data->rank,
-                'status'    => trim($data->status).' (Dari Omset Global)',
+                'status'    => trim($data->status).' (Dari Omzet Global)',
                 'keterangan' => trim($prosentase)
             ];
         }
@@ -1072,7 +1072,7 @@ class DashboardController extends Controller
                 'name'      => strtoupper(trim($user_id)),
                 'type'      => "Bertahan",
                 'peringkat' => "∞",
-                'status'    => "Bertahan (Dari Omset Global)",
+                'status'    => "Bertahan (Dari Omzet Global)",
                 'keterangan' => strtoupper(trim($role_id)),
             ]);
         }

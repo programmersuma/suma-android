@@ -10,6 +10,7 @@ use App\Http\Controllers\App\Part\CartController;
 use App\Http\Controllers\App\Part\PartController;
 use App\Http\Controllers\App\Part\PofController;
 use App\Http\Controllers\App\Part\SuggestionController;
+use App\Http\Controllers\App\Part\SalesBoController;
 use App\Http\Controllers\App\Promo\PromoController;
 use App\Http\Controllers\App\Sales\SalesmanController;
 use App\Http\Controllers\App\Sales\VisitController;
@@ -77,7 +78,6 @@ Route::controller(CartController::class)->group(function () {
     Route::post('cart/submit-order', 'submitOrder');
     Route::post('cart/import-excel', 'importExcel');
     Route::post('cart/import-excel-result', 'importExcelResult');
-
 });
 
 Route::controller(DealerController::class)->group(function () {
@@ -103,6 +103,12 @@ Route::controller(PartController::class)->group(function () {
     Route::post('part/price-list', 'priceList');
 
     Route::post('part/check-stock', 'partSearch');
+});
+
+Route::controller(SalesBoController::class)->group(function () {
+    Route::post('sales-bo/dealer-list', 'listDealerSalesBo');
+    Route::post('sales-bo/part-list', 'listPartSalesBo');
+
 });
 
 Route::controller(SalesmanController::class)->group(function () {

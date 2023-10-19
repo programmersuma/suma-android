@@ -828,17 +828,20 @@ class CartController extends Controller {
                     }
                 }
 
-                if(trim($data->kode_tpc) == '14') {
-                    if(strtoupper(trim($data->kode_file)) == 'A') {
-                        if((float)$data->disc1 > 0 && (float)$data->disc2 > 0) {
-                            return ApiResponse::responseWarning('Part number '.strtoupper(trim($data->part_number)).' di diskon 2x');
+                if(strtoupper(trim($role_id)) != 'D_H3') {
+                    if(trim($data->kode_tpc) == '14') {
+                        if(strtoupper(trim($data->kode_file)) == 'A') {
+                            if((float)$data->disc1 > 0 && (float)$data->disc2 > 0) {
+                                return ApiResponse::responseWarning('Part number '.strtoupper(trim($data->part_number)).' di diskon 2x');
+                            }
+                        }
+
+                        if((float)$data->disc1 <= 0 && (float)$data->disc2 <= 0) {
+                            return ApiResponse::responseWarning('Part number '.strtoupper(trim($data->part_number)).' belum ada diskon');
                         }
                     }
-
-                    if((float)$data->disc1 <= 0 && (float)$data->disc2 <= 0) {
-                        return ApiResponse::responseWarning('Part number '.strtoupper(trim($data->part_number)).' belum ada diskon');
-                    }
                 }
+
 
                 if((double)$data->harga_pokok > (double)$data->harga_satuan) {
                     return ApiResponse::responseWarning('Part number '.strtoupper(trim($data->part_number)).' penjualan rugi.

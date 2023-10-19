@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Dealer\DealerController;
 use App\Http\Controllers\Api\Part\CartController;
 use App\Http\Controllers\Api\Part\PartController;
 use App\Http\Controllers\Api\Part\PofController;
+use App\Http\Controllers\Api\Part\SalesBoController;
 use App\Http\Controllers\Api\Part\SuggestionController;
 use App\Http\Controllers\Api\Promo\PromoController;
 use App\Http\Controllers\Api\Sales\RealisasiVisitController;
@@ -106,6 +107,12 @@ Route::group(['middleware' => 'checkToken'], function() {
         Route::post('part/price-list', 'priceList');
 
         Route::post('part/check-stock', 'partSearch');
+    });
+
+    Route::controller(SalesBoController::class)->group(function () {
+        Route::post('sales-bo/dealer-list', 'listDealerSalesBo');
+        Route::post('sales-bo/part-list', 'listPartSalesBo');
+
     });
 
     Route::controller(SalesmanController::class)->group(function () {
