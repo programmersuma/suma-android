@@ -220,7 +220,7 @@ class CartController extends Controller {
                 if((double)$data->stock <= 0) {
                     $available_part = 'Not Available';
                 } else {
-                    if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_MGMT') {
+                    if(strtoupper(trim($request->userlogin['role_id'])) != 'MD_H3_MGMT') {
                         $available_part = 'Available';
                     } else {
                         $available_part = 'Available '.number_format($data->stock).' pcs';
