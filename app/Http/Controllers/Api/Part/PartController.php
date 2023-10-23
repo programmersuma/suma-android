@@ -247,7 +247,7 @@ class PartController extends Controller {
             $result = $sql->limit(50)->get();
 
             $list_search_part = '';
-            $data_part = [];
+            $data_part = new Collection();
             $data_type_motor = [];
             $collection_data_part = new Collection();
             $result_search_part = [];
@@ -498,7 +498,7 @@ class PartController extends Controller {
                 $part_number = '';
                 foreach($collection_data_part as $collection) {
                     if ($part_number != $collection->part_number) {
-                        $data_part[] = [
+                        $data_part->push((object) [
                             'id'                => (int)$collection->id,
                             'ms_dealer_id'      => (int)$collection->ms_dealer_id,
                             'dealer_code'       => strtoupper(trim($collection->dealer_code)),
@@ -530,40 +530,40 @@ class PartController extends Controller {
                             'keterangan_bo'     => trim($collection->keterangan_bo),
                             'keterangan_faktur' => trim($collection->keterangan_faktur),
                             'keterangan_pof'    => trim($collection->keterangan_pof),
-                        ];
+                        ]);
+
                         $part_number = $collection->part_number;
                     }
                 }
 
                 if(!empty($request->get('sorting'))) {
                     if($request->get('sorting') == 'part_number|asc') {
-                        $result_search_part = collect($data_part)->sortBy('part_number');
+                        $result_search_part = $data_part->sortBy('part_number');
                     } elseif ($request->get('sorting') == 'part_number|desc') {
-                        $result_search_part = collect($data_part)->sortByDesc('part_number');
+                        $result_search_part = $data_part->sortByDesc('part_number');
                     }
 
                     if ($request->get('sorting') == 'description|asc') {
-                        $result_search_part = collect($data_part)->sortBy('part_description');
+                        $result_search_part = $data_part->sortBy('part_description');
                     } elseif ($request->get('sorting') == 'description|desc') {
-                        $result_search_part = collect($data_part)->sortByDesc('part_description');
+                        $result_search_part = $data_part->sortByDesc('part_description');
                     }
 
                     if ($request->get('sorting') == 'available_part|a') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortBy('available_part');
+                        $result_search_part = $data_part->sortBy('part_number')->sortBy('available_part');
                     } elseif ($request->get('sorting') == 'available_part|na') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortByDesc('available_part');
+                        $result_search_part = $data_part->sortBy('part_number')->sortByDesc('available_part');
                     }
 
                     if ($request->get('sorting') == 'promo|yes') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortByDesc('is_campaign');
+                        $result_search_part = $data_part->sortBy('part_number')->sortByDesc('is_campaign');
                     } elseif ($request->get('sorting') == 'promo|no') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortBy('is_campaign');
+                        $result_search_part = $data_part->sortBy('part_number')->sortBy('is_campaign');
                     }
                 } else {
-                    $result_search_part = collect($data_part)->sortBy('part_number');
+                    $result_search_part = $data_part->sortBy('part_number');
                 }
-
-                $result_search_part->values()->all();
+                $result_search_part = $result_search_part->values()->all();
             }
 
             return ApiResponse::responseSuccess('success', [ 'data' => $result_search_part ]);
