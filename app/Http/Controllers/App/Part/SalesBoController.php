@@ -45,4 +45,23 @@ class SalesBoController extends Controller {
             return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
         }
     }
+
+    public function listFakturSalesBo(Request $request) {
+        try {
+            $url = 'sales-bo/faktur-list';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'page'          => $request->get('page'),
+                'tanggal'       => $request->get('tanggal'),
+                'dealer'        => $request->get('dealer'),
+                'part_number'   => $request->get('part_number'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
 }

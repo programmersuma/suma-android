@@ -26,12 +26,14 @@ class SalesmanController extends Controller
         }
     }
 
-    public function listSelectedSalesman(Request $request) {
+    public function listSalesmanKoordinator(Request $request) {
         try {
-            $url = 'sales/list-selected-salesman';
+            $url = 'sales/list-salesman-koordinator';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'search'        => $request->get('salesman'),
+                'page'          => $request->get('page'),
+                'search'        => $request->get('search'),
+                'koordinator'   => $request->get('koordinator'),
                 'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
@@ -47,7 +49,8 @@ class SalesmanController extends Controller
             $url = 'sales/list-koordinator';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'search'        => $request->get('salesman'),
+                'page'          => $request->get('page'),
+                'search'        => $request->get('search'),
                 'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);

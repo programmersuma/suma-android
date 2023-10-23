@@ -86,6 +86,7 @@ Route::group(['middleware' => 'checkToken'], function() {
 
     Route::controller(DealerController::class)->group(function () {
         Route::post('dealer/list-dealer', 'listDealer');
+        Route::post('dealer/list-dealer-salesman', 'listDealerSalesman');
         Route::post('dealer/list-competitor', 'listCompetitor');
         Route::post('dealer/add-competitor', 'addCompetitor');
         Route::post('dealer/add-new-dealer', 'addNewDealer');
@@ -112,12 +113,13 @@ Route::group(['middleware' => 'checkToken'], function() {
     Route::controller(SalesBoController::class)->group(function () {
         Route::post('sales-bo/dealer-list', 'listDealerSalesBo');
         Route::post('sales-bo/part-list', 'listPartSalesBo');
+        Route::post('sales-bo/faktur-list', 'listFakturSalesBo');
 
     });
 
     Route::controller(SalesmanController::class)->group(function () {
         Route::post('sales/list-salesman', 'listSalesman');
-        Route::post('sales/list-selected-salesman', 'listSelectedSalesman');
+        Route::post('sales/list-salesman-koordinator', 'listSalesmanKoordinator');
         Route::post('sales/list-koordinator', 'listKoordinator');
 
     });

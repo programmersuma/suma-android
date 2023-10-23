@@ -185,6 +185,167 @@ class DealerController extends Controller {
         }
     }
 
+    public function listDealerSalesman(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required|string',
+                'salesman'  => 'required|string',
+            ]);
+
+            if ($validate->fails()) {
+                return ApiResponse::responseWarning('Data salesman dan divisi tidak boleh kosong');
+            }
+
+            $salesman = '';
+
+            if(!empty($request->get('salesman'))) {
+                $list_salesman = explode(',', $request->get('salesman'));
+
+                foreach($list_salesman as $data) {
+                    if(trim($salesman) == '') {
+                        $salesman = "'".$data."'";
+                    } else {
+                        $salesman .= ",'".$data."'";
+                    }
+                }
+            }
+            /* ==================================================================== */
+            /* Search Data Favorite */
+            /* ==================================================================== */
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('dealer_fav')->lock('with (nolock)')
+                    ->selectRaw("isnull(msdealer.id, 0) as id,
+                                isnull(dealer_fav.kd_dealer, '') as kode_dealer,
+                                isnull(dealer.nm_dealer, '') as nama_dealer,
+                                isnull(dealer.alamat1, '') as alamat,
+                                isnull(dealer.kota, '') as kota,
+                                isnull(dealer.kabupaten, '') as kabupaten,
+                                isnull(dealer.latitude, 0) as latitude,
+                                isnull(dealer.longitude, 0) as longitude")
+                    ->leftJoin(DB::raw('msdealer with (nolock)'), function($join) {
+                        $join->on('msdealer.kd_dealer', '=', 'dealer_fav.kd_dealer')
+                            ->on('msdealer.companyid', '=', 'dealer_fav.companyid');
+                    })
+                    ->leftJoin(DB::raw('dealer with (nolock)'), function($join) {
+                        $join->on('dealer.kd_dealer', '=', 'dealer_fav.kd_dealer')
+                            ->on('dealer.companyid', '=', 'dealer_fav.companyid');
+                    })
+                    ->whereRaw("dealer.kd_sales in (".$salesman.")")
+                    ->where('dealer_fav.user_id', strtoupper(trim($request->userlogin['user_id'])))
+                    ->where('dealer_fav.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->whereRaw("isnull(dealer.delsign, 0)=0");
+
+            if(!empty($request->get('search')) && trim($request->get('search') != '')) {
+                $sql->where(function($query) use ($request) {
+                    return $query
+                            ->where('dealer_fav.kd_dealer', 'like', '%'.trim($request->get('search')).'%')
+                            ->orWhere('dealer.nm_dealer', 'like', '%'.trim($request->get('search')).'%');
+                });
+            }
+
+            $sql = $sql->orderBy('dealer_fav.kd_dealer', 'asc')
+                        ->get();
+
+            foreach($sql as $data) {
+                $data_favorite[] = [
+                    'id'        => (int)$data->id,
+                    'code'      => strtoupper(trim($data->kode_dealer)),
+                    'name'      => strtoupper(trim($data->nama_dealer)),
+                    'address'   => strtoupper(trim($data->alamat)),
+                    'regency'   => strtoupper(trim($data->kabupaten)),
+                    'latitude'  => trim($data->latitude),
+                    'longitude' => trim($data->longitude)
+                ];
+            }
+            /* ==================================================================== */
+            /* Search Data Dealer */
+            /* ==================================================================== */
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('dealer')->lock('with (nolock)')
+                    ->selectRaw("isnull(dealer.kd_dealer, '') as kode_dealer")
+                    ->whereRaw("isnull(dealer.delsign, 0)=0")
+                    ->whereRaw("dealer.kd_sales in (".$salesman.")")
+                    ->where('dealer.companyid', strtoupper(trim($request->userlogin['companyid'])));
+
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+                $sql->where('dealer.kd_sales', strtoupper(trim($request->userlogin['user_id'])));
+            }
+
+            if(!empty($request->get('search')) && trim($request->get('search') != '')) {
+                $sql->where(function($query) use ($request) {
+                    return $query
+                            ->where('dealer.kd_dealer', 'like', '%'.trim($request->get('search')).'%')
+                            ->orWhere('dealer.nm_dealer', 'like', '%'.trim($request->get('search')).'%');
+                });
+            }
+
+            $sql = $sql->orderBy('dealer.kd_dealer', 'asc')
+                        ->paginate(10);
+
+            $result = collect($sql)->toArray();
+            $data_result = $result['data'];
+            $kode_dealer_result = '';
+
+            $data_favorite = [];
+            $data_dealer = [];
+
+            foreach($data_result as $data) {
+                if(strtoupper(trim($kode_dealer_result)) == '') {
+                    $kode_dealer_result = "'".strtoupper(trim($data->kode_dealer))."'";
+                } else {
+                    $kode_dealer_result .= ",'".strtoupper(trim($data->kode_dealer))."'";
+                }
+            }
+
+            if(trim($kode_dealer_result) != '') {
+                $sql = "select  isnull(msdealer.id, 0) as id,
+                                isnull(msdealer.kd_dealer, '') as kode_dealer,
+                                isnull(dealer.nm_dealer, '') as nama_dealer,
+                                isnull(dealer.alamat1, '') as alamat,
+                                isnull(dealer.kota, '') as kota,
+                                isnull(dealer.kabupaten, '') as kabupaten,
+                                isnull(dealer.latitude, 0) as latitude,
+                                isnull(dealer.longitude, 0) as longitude
+                        from
+                        (
+                            select  msdealer.companyid, msdealer.id, msdealer.kd_dealer
+                            from    msdealer with (nolock)
+                            where   msdealer.kd_dealer in (".strtoupper(trim($kode_dealer_result)).") and
+                                    msdealer.companyid=?
+                        )   msdealer
+                                left join dealer with (nolock) on msdealer.kd_dealer=dealer.kd_dealer and
+                                            msdealer.companyid=dealer.companyid
+                        order by msdealer.kd_dealer asc";
+
+                $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin['companyid'])) ]);
+
+                foreach($result as $data) {
+                    $data_dealer[] = [
+                        'id'        => (int)$data->id,
+                        'code'      => strtoupper(trim($data->kode_dealer)),
+                        'name'      => strtoupper(trim($data->nama_dealer)),
+                        'address'   => strtoupper(trim($data->alamat)),
+                        'regency'   => strtoupper(trim($data->kabupaten)),
+                        'latitude'  => trim($data->latitude),
+                        'longitude' => trim($data->longitude)
+                    ];
+                }
+            }
+
+            $result_list_dealer = [
+                'data'  => [
+                    'favorit'   => $data_favorite,
+                    'list'      => $data_dealer
+                ]
+            ];
+
+            return ApiResponse::responseSuccess('success', $result_list_dealer);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
+
     public function listCompetitor(Request $request) {
         try {
             $validate = Validator::make($request->all(), [

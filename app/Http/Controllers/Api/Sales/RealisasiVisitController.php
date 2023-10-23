@@ -753,9 +753,9 @@ class RealisasiVisitController extends Controller {
 
                 foreach($list_koordinator_selected as $result) {
                     if(strtoupper(trim($list_koordinator)) == '') {
-                        $list_koordinator = "'".strtoupper(trim($result->coordinator_code))."'";
+                        $list_koordinator = "'".strtoupper(trim($result->koordinator_code))."'";
                     } else {
-                        $list_koordinator .= ",'".strtoupper(trim($result->coordinator_code))."'";
+                        $list_koordinator .= ",'".strtoupper(trim($result->koordinator_code))."'";
                     }
                 }
             }

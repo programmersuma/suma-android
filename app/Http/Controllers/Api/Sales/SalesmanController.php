@@ -96,31 +96,29 @@ class SalesmanController extends Controller
         }
     }
 
-    public function listSelectedSalesman(Request $request) {
+    public function listSalesmanKoordinator(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
-                'divisi'    => 'required'
+                'divisi'        => 'required',
+                'koordinator'   => 'required'
             ]);
 
             if($validate->fails()) {
-                return ApiResponse::responseWarning('Pilih data divisi terlebih dahulu');
+                return ApiResponse::responseWarning('Pilih data koordinator dan divisi terlebih dahulu');
             }
-            /* ==================================================================== */
-            /* Cek Role Id Supervisor */
-            /* ==================================================================== */
-            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
-                $sql = DB::connection($request->get('divisi'))
-                        ->table('superspv')->lock('with (nolock)')
-                        ->selectRaw("isnull(superspv.kd_spv, '') as kode_supervisor")
-                        ->where('superspv.nm_spv', strtoupper(trim($request->userlogin['user_id'])))
-                        ->where('superspv.companyid', strtoupper(trim($request->userlogin['companyid'])))
-                        ->first();
 
-                if(empty($sql->kode_supervisor) && trim($sql->kode_supervisor) == '') {
-                    return ApiResponse::responseWarning('Kode supervisor anda tidak ditemukan, hubungi IT Programmer');
+            $koordinator = '';
+
+            if(!empty($request->get('koordinator'))) {
+                $list_koordinator = explode(',', $request->get('koordinator'));
+
+                foreach($list_koordinator as $data) {
+                    if(trim($koordinator) == '') {
+                        $koordinator = "'".$data."'";
+                    } else {
+                        $koordinator .= ",'".$data."'";
+                    }
                 }
-
-                $kode_supervisor = strtoupper(trim($sql->kode_supervisor));
             }
 
             $sql = DB::connection($request->get('divisi'))
@@ -130,11 +128,14 @@ class SalesmanController extends Controller
                                 isnull(salesman.nm_sales, '') as name,
                                 isnull(salesman.usertime, '') as created_at,
                                 isnull(salesman.usertime, '') as update_at")
+                    ->leftJoin(DB::raw('superspv with (nolock)'), function($join) {
+                        $join->on('superspv.kd_spv', '=', 'salesman.spv')
+                            ->on('superspv.companyid', '=', 'salesman.companyid');
+                    })
+                    ->whereRaw("superspv.kd_spv in (".$koordinator.")")
                     ->where('salesman.companyid', strtoupper(trim($request->userlogin['companyid'])));
 
-            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_KORSM') {
-                $sql->where('salesman.spv', strtoupper(trim($kode_supervisor)));
-            } elseif(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
+            if(strtoupper(trim($request->userlogin['role_id'])) == 'MD_H3_SM') {
                 $sql->where('salesman.kd_sales', strtoupper(trim($request->userlogin['user_id'])));
             }
 
@@ -146,15 +147,19 @@ class SalesmanController extends Controller
                 });
             }
 
-            $result = $sql->orderBy('salesman.kd_sales', 'asc')->get();
+            $sql = $sql->orderBy('salesman.kd_sales', 'asc')
+                        ->paginate(15);
+
+            $result = collect($sql)->toArray();
+            $data_result = $result['data'];
 
             $salesman = [];
 
-            foreach($result as $data) {
+            foreach($data_result as $data) {
                 $salesman[] = [
                     'id'            => (int)$data->id,
                     'sales_code'    => strtoupper(trim($data->sales_code)),
-                    'name'          => strtoupper(trim($data->name)),
+                    'sales_name'    => strtoupper(trim($data->name)),
                     'created_at'    => strtoupper(trim($data->created_at)),
                     'update_at'     => strtoupper(trim($data->update_at))
                 ];
@@ -162,7 +167,10 @@ class SalesmanController extends Controller
 
             $data_sales = new Collection();
             $data_sales->push((object) [
-                'data' => $salesman
+                'data' => [
+                    'favorit'   => [],
+                    'list'      => $salesman,
+                ]
             ]);
 
             return ApiResponse::responseSuccess('success', $data_sales->first());
@@ -198,10 +206,14 @@ class SalesmanController extends Controller
                 });
             }
 
-            $result = $sql->orderBy('superspv.kd_spv', 'asc')->get();
+            $sql = $sql->orderBy('superspv.kd_spv', 'asc')
+                        ->paginate(10);
+
+            $result = collect($sql)->toArray();
+            $data_result = $result['data'];
 
             $data_sales = [
-                'data'  => $result
+                'data'  => $data_result
             ];
 
             return ApiResponse::responseSuccess('success', $data_sales);

@@ -26,6 +26,24 @@ class DealerController extends Controller {
         }
     }
 
+    public function listDealerSalesman(Request $request) {
+        try {
+            $url = 'dealer/list-dealer-salesman';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'page'      => $request->get('page'),
+                'salesman'  => $request->get('salesman'),
+                'search'    => $request->get('search'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
     public function listCompetitor(Request $request) {
         try {
             $url = 'dealer/list-competitor';
