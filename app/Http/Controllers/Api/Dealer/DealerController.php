@@ -761,16 +761,17 @@ class DealerController extends Controller {
                                             faktur.companyid=salesman.companyid
                     )	faktur";
 
-            $result = DB::connection($request->get('divisi'))
+            $query = DB::connection($request->get('divisi'))
                         ->table(DB::raw('('.$sql.') as jtp'))
                         ->orderBy('jtp.jatuh_tempo', 'asc')
                         ->orderBy('jtp.nomor_faktur', 'asc')
                         ->paginate(10);
 
-            return $result;
+            $result = collect($query)->toArray();
+            $data_result = $result['data'];
             $data_jatuh_tempo = [];
 
-            foreach($result as $data) {
+            foreach($data_result as $data) {
                 $data_jatuh_tempo[] = [
                     'nomor_faktur'      => strtoupper(trim($data->nomor_faktur)),
                     'dealer_code'       => strtoupper(trim($data->dealer_code)),
