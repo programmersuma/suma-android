@@ -143,6 +143,7 @@ class DealerController extends Controller {
             $url = 'dealer/list-jatuh-tempo';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
+                'page'          => $request->get('page'),
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
                 'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];

@@ -759,10 +759,15 @@ class DealerController extends Controller {
                                             faktur.companyid=dealer.companyid
                                 left join salesman with (nolock) on faktur.kd_sales=salesman.kd_sales and
                                             faktur.companyid=salesman.companyid
-                    )	faktur
-                    order by faktur.jatuh_tempo asc, faktur.no_faktur asc";
+                    )	faktur";
 
-            $result = DB::connection($request->get('divisi'))->select($sql);
+            $result = DB::connection($request->get('divisi'))
+                        ->table(DB::raw('('.$sql.') as jtp'))
+                        ->orderBy('jtp.jatuh_tempo', 'asc')
+                        ->orderBy('jtp.nomor_faktur', 'asc')
+                        ->paginate(10);
+
+            return $result;
             $data_jatuh_tempo = [];
 
             foreach($result as $data) {
