@@ -143,13 +143,6 @@ class VisitController extends Controller
                 return ApiResponse::responseWarning('Isi data divisi, ms_dealer_id, date, latitude, dan longitude');
             }
 
-            $tanggal_visit = strtotime($request->get('date').' 00:00:00');
-            $tanggal_sekarang = strtotime(date('Y-m-d').' 00:00:00');
-
-            if((int)$tanggal_visit < (int)$tanggal_sekarang) {
-                return ApiResponse::responseWarning('Tanggal visit tidak boleh lebih kecil dari tanggal berjalan');
-            }
-
             $sql = DB::connection($request->get('divisi'))
                     ->table('msdealer')->lock('with (nolock)')
                     ->selectRaw("isnull(msdealer.kd_dealer, '') as kode_dealer,
