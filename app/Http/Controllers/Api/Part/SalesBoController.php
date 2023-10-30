@@ -152,7 +152,7 @@ class SalesBoController extends Controller {
                 ];
             }
 
-            return ApiResponse::responseSuccess('success', $result);
+            return ApiResponse::responseSuccess('success', $data_dealer);
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
