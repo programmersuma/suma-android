@@ -128,6 +128,30 @@ class SalesBoController extends Controller {
 
             $result = DB::select($sql);
 
+            $data_dealer = [];
+
+            foreach($result as $data) {
+                $limit = (double)$data->limit;
+                $omzet = (double)$data->omzet;
+                $piutang = (double)$data->piutang;
+                $jumlah_faktur = (double)$data->jumlah_faktur;
+
+                if(strtoupper(trim($role_id)) == 'D_H3') {
+                    $limit = 0;
+                }
+
+                $data_dealer[] = [
+                    'kode_dealer'   => strtoupper(trim($data->kode_dealer)),
+                    'nama_dealer'   => strtoupper(trim($data->nama_dealer)),
+                    'alamat'        => strtoupper(trim($data->alamat)),
+                    'kabupaten'     => strtoupper(trim($data->kabupaten)),
+                    'limit'         => (double)$limit,
+                    'omzet'         => (double)$omzet,
+                    'piutang'       => (double)$piutang,
+                    'jumlah_faktur' => (double)$jumlah_faktur
+                ];
+            }
+
             return ApiResponse::responseSuccess('success', $result);
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
