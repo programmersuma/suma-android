@@ -34,8 +34,9 @@ class PofController extends Controller
             $url = 'pof/detail-pof-order';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'nomor_pof'     => $request->get('nomor_pof'),
-                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+                'page'      => $request->get('page'),
+                'nomor_pof' => $request->get('nomor_pof'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 

@@ -146,193 +146,227 @@ class PofController extends Controller
                 return ApiResponse::responseWarning('Silahkan isi divisi dan nomor pof terlebih dahulu');
             }
 
-            $sql = "select	isnull(pof.no_pof, '') as order_code, isnull(pof.tgl_pof, '') as order_date,
-                            isnull(pof.kd_sales, '') as sales_code, isnull(salesman.nm_sales, '') as sales_name,
-                            isnull(pof.kd_dealer, '') as dealer_code, isnull(dealer.nm_dealer, '') as dealer_name,
-                            isnull(pof.ket, '') as keterangan, isnull(pof.kd_tpc, '') as tpc_code,
-                            isnull(pof.umur_pof, 0) as umur_pof, isnull(pof.tgl_akhir_pof, '') as tanggal_jatuh_tempo,
-                            isnull(pof.bo, '') as bo, isnull(pof.disc, 0) as disc_header, isnull(pof.total, 0) as total,
-                            isnull(pof.approve, 0) as approve, isnull(pof.appr_usr, '') as approve_user,
-                            isnull(pof.sts_fakt, '') as status_faktur_header, isnull(pof_dtl.kd_part, '') as part_number,
-                            isnull(part.ket, '') as part_description, isnull(produk.nama, '') as item_group,
-                            isnull(pof_dtl.harga, 0) as amount, isnull(pof_dtl.jml_order, 0) as order_quantity,
-                            isnull(pof_dtl.terlayani, 0) as served_quantity, isnull(pof_dtl.disc1, 0) as discount,
-                            isnull(pof_dtl.jumlah, 0) as amount_total, isnull(pof_dtl.sts_fakt, 0) as status_faktur_detail,
-                            case
-                                when isnull(discp.kd_produk, '') <> '' then
-                                    case
-                                        when isnull(dealer_setting.kd_dealer, '') <> '' then
-                                            case when isnull(dealer_setting.paretto, 0) = 1 then
-                                                iif(isnull(dealer_setting.[top], 'T')='T',
-                                                    isnull(discp.discp_tunai_khusus, 0),
-                                                    isnull(discp.discp_rekening_khusus, 0)
-                                                )
-                                            else
-                                                iif(isnull(dealer_setting.[top], 'T')='T',
-                                                    isnull(discp.discp_tunai, 0),
-                                                    isnull(discp.discp_rekening, 0)
-                                                )
-                                            end
-                                        else
-                                            isnull(discp.discp_tunai, 0)
-                                    end
-                                else 0
-                            end as disc_max_produk, isnull(part.hrg_netto, 0) as hrg_netto, isnull(bo.jumlah, 0) as jumlah_bo,
-                            isnull(part.hrg_pokok, 0) + round(((isnull(part.hrg_pokok, 0) * isnull(company.ppn, 0)) / 100), 0) as hrg_netto_part,
-                            isnull(pof_dtl.harga, 0) - round(((isnull(pof_dtl.harga, 0) * isnull(pof_dtl.disc1, 0)) / 100), 0) -
-                                round((((isnull(pof_dtl.harga, 0) -
-                                    round(((isnull(pof_dtl.harga, 0) * isnull(pof_dtl.disc1, 0)) / 100), 0)) *
-                                        isnull(pof.disc, 0)) / 100), 0) as total_netto_part,
-                            isnull(company.kd_file, '') as kode_file,
-                            isnull(pof.usertime, '') as usertime
-                    from
-                    (
-                        select	pof.companyid, pof.no_pof, pof.tgl_pof, pof.kd_sales,
-                                pof.kd_dealer, pof.ket, pof.kd_tpc, pof.umur_pof,
-                                pof.tgl_akhir_pof, pof.approve, pof.appr_usr,
-                                pof.bo, pof.disc, pof.total, pof.sts_fakt,
-                                pof.usertime
-                        from	pof with (nolock)
-                        where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
-                                pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pof')->lock('with (nolock)')
+                    ->selectRaw("isnull(pof.no_pof, '') as order_code, isnull(pof.tgl_pof, '') as order_date,
+                                isnull(pof.kd_sales, '') as sales_code, isnull(salesman.nm_sales, '') as sales_name,
+                                isnull(pof.kd_dealer, '') as dealer_code, isnull(dealer.nm_dealer, '') as dealer_name,
+                                isnull(pof.ket, '') as keterangan, isnull(pof.kd_tpc, '') as tpc_code,
+                                isnull(pof.umur_pof, 0) as umur_pof, isnull(pof.tgl_akhir_pof, '') as tanggal_jatuh_tempo,
+                                isnull(pof.bo, '') as bo, isnull(pof.disc, 0) as disc_header, isnull(pof.total, 0) as total,
+                                isnull(pof.approve, 0) as approve, isnull(pof.appr_usr, '') as approve_user,
+                                isnull(pof.sts_fakt, '') as status_faktur_header,
+                                isnull(company.kd_file, '') as kode_file,
+                                isnull(pof.usertime, '') as usertime")
+                    ->leftJoin(DB::raw('company with (nolock)'), function($join) {
+                        $join->on('company.companyid', '=', 'pof.companyid');
+                    })
+                    ->leftJoin(DB::raw('salesman with (nolock)'), function($join) {
+                        $join->on('salesman.kd_sales', '=', 'pof.kd_sales')
+                            ->on('salesman.companyid', '=', 'pof.companyid');
+                    })
+                    ->leftJoin(DB::raw('dealer with (nolock)'), function($join) {
+                        $join->on('dealer.kd_dealer', '=', 'pof.kd_dealer')
+                            ->on('dealer.companyid', '=', 'pof.companyid');
+                    })
+                    ->where('pof.no_pof', strtoupper(trim($request->get('nomor_pof'))))
+                    ->where('pof.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->first();
 
-            if (!empty($request->get('salesman')) && trim($request->get('salesman')) != '') {
-                $sql .= " and pof.kd_sales='".strtoupper(trim($request->get('salesman')))."'";
+            if(empty($sql->order_code)) {
+                return ApiResponse::responseWarning('Nomor pof tidak terdaftar');
             }
 
-            if (!empty($request->get('dealer')) && trim($request->get('dealer')) != '') {
-                $sql .= " and pof.kd_dealer='".strtoupper(trim($request->get('dealer')))."'";
-            }
+            $order_code = strtoupper(trim($sql->order_code));
+            $order_date = strtoupper(trim($sql->order_date));
+            $sales_code = strtoupper(trim($sql->sales_code));
+            $sales_name = strtoupper(trim($sql->sales_name));
+            $dealer_code = strtoupper(trim($sql->dealer_code));
+            $dealer_name = strtoupper(trim($sql->dealer_name));
+            $keterangan = strtoupper(trim($sql->keterangan));
+            $tpc_code = strtoupper(trim($sql->tpc_code));
+            $umur_pof = (double)$sql->umur_pof;
+            $tanggal_jatuh_tempo = trim($sql->tanggal_jatuh_tempo);
+            $back_order = (strtoupper(trim($sql->bo)) == 'B') ? 'BACK ORDER' : 'TIDAK BO';
+            $discount = (double)$sql->disc_header;
+            $total = (double)$sql->total;
+            $approve  = (int)$sql->approve;
+            $approve_user = strtoupper(trim($sql->approve_user));
+            $usertime = strtoupper(trim($sql->usertime));
+            $status_faktur = (int)$sql->status_faktur_header;
+            $kode_file = strtoupper(trim($sql->kode_file));
 
-            $sql .= " )	pof
-                            inner join company with (nolock) on pof.companyid=company.companyid
-                            left join salesman with (nolock) on pof.kd_sales=salesman.kd_sales and
-                                        pof.companyid=salesman.companyid
-                            left join dealer with (nolock) on pof.kd_dealer=dealer.kd_dealer and
-                                        pof.companyid=dealer.companyid
-                            inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
-                                        pof.companyid=pof_dtl.companyid
-                            left join part with (nolock) on pof_dtl.kd_part=part.kd_part and
-                                        pof.companyid=part.companyid
-                            left join sub with (nolock) on part.kd_sub=sub.kd_sub
-                            left join produk with (nolock) on sub.kd_produk=produk.kd_produk
-                            left join bo with (nolock) on pof_dtl.kd_part=bo.kd_part and
-                                        pof.kd_dealer=bo.kd_dealer and
-                                        pof.companyid=bo.companyid
-                            left join discp with (nolock) on produk.kd_produk=discp.kd_produk and
-                                        iif(isnull(company.inisial, 0)=1, 'RK', 'PC')=discp.cabang
-                            left join dealer_setting with (nolock) on pof.kd_dealer=dealer_setting.kd_dealer and
-                                        pof.companyid=dealer_setting.companyid
-                    order by pof_dtl.kd_part asc";
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pof_dtl')->lock('with (nolock)')
+                    ->selectRaw("isnull(pof_dtl.no_pof, '') as nomor_pof,
+                                isnull(pof_dtl.kd_part, '') as part_number")
+                    ->where('pof_dtl.no_pof', strtoupper(trim($request->get('nomor_pof'))))
+                    ->where('pof_dtl.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->orderByRaw("pof_dtl.kd_part asc")
+                    ->paginate(10);
 
-            $result = DB::connection($request->get('divisi'))->select($sql);
+            $result = collect($sql)->toArray();
+            $data_result = $result['data'];
+            $part_number_pof = '';
 
-            $data_order = new Collection();
-            $data_detail_order = [];
-
-            foreach($result as $result) {
-                $notes_diskon = '';
-                $notes_harga = '';
-                $notes_bo = '';
-                $notes_marketing = '';
-
-                if((double)$result->jumlah_bo > 0) {
-                    $notes_bo = '*) Sudah ada di BO sejumlah '.number_format($result->jumlah_bo).' PCS';
-                }
-
-                if((double)$result->hrg_netto_part > (double)$result->total_netto_part) {
-                    $notes_harga = '*) Penjualan rugi, total harga jual lebih rendah dari harga yang telah di tentukan';
+            foreach($data_result as $data) {
+                if(strtoupper(trim($part_number_pof)) == '') {
+                    $part_number_pof = "'".strtoupper(trim($data->part_number))."'";
                 } else {
-                    if((double)$result->hrg_netto > 0) {
-                        if((double)$result->hrg_netto > (double)$result->total_netto_part) {
-                            $notes_harga = '*) Penjualan rugi, total harga jual lebih rendah dari harga netto';
-                        }
-                    }
+                    $part_number_pof .= ",'".strtoupper(trim($data->part_number))."'";
                 }
-
-                if(strtoupper(trim($result->tpc_code)) == '14') {
-                    if((double)$result->disc_max_produk > 0) {
-                        if((double)$result->disc_header > (double)$result->disc_max_produk) {
-                            $notes_diskon = '*) Diskon maksimal produk '.strtoupper(trim($result->item_group)).' : '.number_format((double)$result->disc_header, 2);
-                        }
-                        if((double)$result->discount > (double)$result->disc_max_produk) {
-                            $notes_diskon = '*) Diskon maksimal produk '.strtoupper(trim($result->item_group)).' : '.number_format((double)$result->disc_header, 2);
-                        }
-                    }
-                }
-
-                if(strtoupper(trim($result->kode_file)) == 'A') {
-                    if((double)$result->disc_header > 0 && (double)$result->discount > 0) {
-                        $notes_diskon = '*) Part number di diskon 2x';
-                    }
-                }
-
-                $data_order->push((object) [
-                    'order_code'            => strtoupper(trim($result->order_code)),
-                    'order_date'            => strtoupper(trim($result->order_date)),
-                    'sales_code'            => strtoupper(trim($result->sales_code)),
-                    'sales_name'            => strtoupper(trim($result->sales_name)),
-                    'dealer_code'           => strtoupper(trim($result->dealer_code)),
-                    'dealer_name'           => strtoupper(trim($result->dealer_name)),
-                    'keterangan'            => strtoupper(trim($result->keterangan)),
-                    'tpc_code'              => strtoupper(trim($result->tpc_code)),
-                    'umur_pof'              => (double)$result->umur_pof,
-                    'tanggal_jatuh_tempo'   => trim($result->tanggal_jatuh_tempo),
-                    'back_order'            => (strtoupper(trim($result->bo)) == 'B') ? 'BACK ORDER' : 'TIDAK BO',
-                    'discount'              => (double)$result->disc_header,
-                    'total'                 => (double)$result->total,
-                    'approve'               => (int)$result->approve,
-                    'approve_user'          => strtoupper(trim($result->approve_user)),
-                    'usertime'              => strtoupper(trim($result->usertime)),
-                    'status_faktur'         => (int)$result->status_faktur_header,
-                ]);
-
-                $data_detail_order[] = [
-                    'order_code'        => strtoupper(trim($result->order_code)),
-                    'part_number'       => strtoupper(trim($result->part_number)),
-                    'part_description'  => strtoupper(trim($result->part_description)),
-                    'part_pictures'     => config('constants.app.app_images_url').'/'.strtoupper(trim($result->part_number)).'.jpg',
-                    'item_group'        => strtoupper(trim($result->item_group)),
-                    'order_quantity'    => (double)$result->order_quantity,
-                    'served_quantity'   => (double)$result->served_quantity,
-                    'amount'            => (double)$result->amount,
-                    'discount'          => (double)$result->discount,
-                    'amount_total'      => (double)$result->amount_total,
-                    'status_faktur'     => (int)$result->status_faktur_detail,
-                    'notes_diskon'      => trim($notes_diskon),
-                    'notes_harga'       => trim($notes_harga),
-                    'notes_bo'          => trim($notes_bo),
-                    'notes_marketing'   => trim($notes_marketing),
-                ];
             }
 
-            $result_order = new Collection();
+            if(trim($part_number_pof) != '') {
+                $sql = "select	isnull(pof_dtl.kd_part, '') as part_number,
+                                isnull(part.ket, '') as part_description, isnull(produk.nama, '') as item_group,
+                                isnull(pof_dtl.harga, 0) as amount, isnull(pof_dtl.jml_order, 0) as order_quantity,
+                                isnull(pof_dtl.terlayani, 0) as served_quantity, isnull(pof_dtl.disc1, 0) as disc_detail,
+                                isnull(pof_dtl.jumlah, 0) as amount_total, isnull(pof_dtl.sts_fakt, 0) as status_faktur_detail,
+                                case
+                                    when isnull(discp.kd_produk, '') <> '' then
+                                        case
+                                            when isnull(dealer_setting.kd_dealer, '') <> '' then
+                                                case when isnull(dealer_setting.paretto, 0) = 1 then
+                                                    iif(isnull(dealer_setting.[top], 'T')='T',
+                                                        isnull(discp.discp_tunai_khusus, 0),
+                                                        isnull(discp.discp_rekening_khusus, 0)
+                                                    )
+                                                else
+                                                    iif(isnull(dealer_setting.[top], 'T')='T',
+                                                        isnull(discp.discp_tunai, 0),
+                                                        isnull(discp.discp_rekening, 0)
+                                                    )
+                                                end
+                                            else
+                                                isnull(discp.discp_tunai, 0)
+                                        end
+                                    else 0
+                                end as disc_max_produk, isnull(part.hrg_netto, 0) as hrg_netto, isnull(bo.jumlah, 0) as jumlah_bo,
+                                isnull(part.hrg_pokok, 0) + round(((isnull(part.hrg_pokok, 0) * isnull(company.ppn, 0)) / 100), 0) as hrg_netto_part,
+                                isnull(pof_dtl.harga, 0) - round(((isnull(pof_dtl.harga, 0) * isnull(pof_dtl.disc1, 0)) / 100), 0) -
+                                    round((((isnull(pof_dtl.harga, 0) -
+                                        round(((isnull(pof_dtl.harga, 0) * isnull(pof_dtl.disc1, 0)) / 100), 0)) *
+                                            isnull(pof.disc, 0)) / 100), 0) as total_netto_part
+                        from
+                        (
+                            select	pof.companyid, pof.no_pof, pof.tgl_pof, pof.kd_sales,
+                                    pof.kd_dealer, pof.ket, pof.kd_tpc, pof.umur_pof,
+                                    pof.tgl_akhir_pof, pof.approve, pof.appr_usr,
+                                    pof.bo, pof.disc, pof.total, pof.sts_fakt,
+                                    pof.usertime
+                            from	pof with (nolock)
+                            where	pof.no_pof='".strtoupper(trim($request->get('nomor_pof')))."' and
+                                    pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."'";
 
-            foreach($data_order as $data) {
-                $result_order->push((object) [
-                    'order_code'            => strtoupper(trim($data->order_code)),
-                    'order_date'            => strtoupper(trim($data->order_date))." ".date('h:i:s'),
-                    'sales_code'            => strtoupper(trim($data->sales_code)),
-                    'sales_name'            => strtoupper(trim($data->sales_name)),
-                    'dealer_code'           => strtoupper(trim($data->dealer_code)),
-                    'dealer_name'           => strtoupper(trim($data->dealer_name)),
-                    'keterangan'            => strtoupper(trim($data->keterangan)),
-                    'tpc_code'              => strtoupper(trim($data->tpc_code)),
-                    'tanggal_jatuh_tempo'   => strtoupper(trim($data->tanggal_jatuh_tempo))." ".date('h:i:s'),
-                    'umur_pof'              => (double)$data->umur_pof,
-                    'back_order'            => strtoupper(trim($data->back_order)),
-                    'discount'              => (double)$data->discount,
-                    'total'                 => (double)$data->total,
-                    'approve'               => (int)$data->approve,
-                    'approve_user'          => strtoupper(trim($data->approve_user)),
-                    'usertime'              => strtoupper(trim($data->usertime)),
-                    'status_faktur'         => (int)$data->status_faktur,
-                    'detail'                => $data_detail_order
-                ]);
+                if (!empty($request->get('salesman')) && trim($request->get('salesman')) != '') {
+                    $sql .= " and pof.kd_sales='".strtoupper(trim($request->get('salesman')))."'";
+                }
+
+                if (!empty($request->get('dealer')) && trim($request->get('dealer')) != '') {
+                    $sql .= " and pof.kd_dealer='".strtoupper(trim($request->get('dealer')))."'";
+                }
+
+                $sql .= " )	pof
+                                inner join company with (nolock) on pof.companyid=company.companyid
+                                inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
+                                            pof.companyid=pof_dtl.companyid
+                                left join part with (nolock) on pof_dtl.kd_part=part.kd_part and
+                                            pof.companyid=part.companyid
+                                left join sub with (nolock) on part.kd_sub=sub.kd_sub
+                                left join produk with (nolock) on sub.kd_produk=produk.kd_produk
+                                left join bo with (nolock) on pof_dtl.kd_part=bo.kd_part and
+                                            pof.kd_dealer=bo.kd_dealer and
+                                            pof.companyid=bo.companyid
+                                left join discp with (nolock) on produk.kd_produk=discp.kd_produk and
+                                            iif(isnull(company.inisial, 0)=1, 'RK', 'PC')=discp.cabang
+                                left join dealer_setting with (nolock) on pof.kd_dealer=dealer_setting.kd_dealer and
+                                            pof.companyid=dealer_setting.companyid
+                        where   pof_dtl.kd_part in (".$part_number_pof.")
+                        order by pof_dtl.kd_part asc";
+
+                $result = DB::connection($request->get('divisi'))->select($sql);
+
+                $data_detail_order = [];
+
+                foreach($result as $result) {
+                    $notes_diskon = '';
+                    $notes_harga = '';
+                    $notes_bo = '';
+                    $notes_marketing = '';
+
+                    if((double)$result->jumlah_bo > 0) {
+                        $notes_bo = '*) Sudah ada di BO sejumlah '.number_format($result->jumlah_bo).' PCS';
+                    }
+
+                    if((double)$result->hrg_netto_part > (double)$result->total_netto_part) {
+                        $notes_harga = '*) Penjualan rugi, total harga jual lebih rendah dari harga yang telah di tentukan';
+                    } else {
+                        if((double)$result->hrg_netto > 0) {
+                            if((double)$result->hrg_netto > (double)$result->total_netto_part) {
+                                $notes_harga = '*) Penjualan rugi, total harga jual lebih rendah dari harga netto';
+                            }
+                        }
+                    }
+
+                    if(strtoupper(trim($tpc_code)) == '14') {
+                        if((double)$result->disc_max_produk > 0) {
+                            if((double)$discount > (double)$result->disc_max_produk) {
+                                $notes_diskon = '*) Diskon maksimal produk '.strtoupper(trim($result->item_group)).' : '.number_format((double)$discount, 2);
+                            }
+                            if((double)$result->disc_detail > (double)$result->disc_max_produk) {
+                                $notes_diskon = '*) Diskon maksimal produk '.strtoupper(trim($result->item_group)).' : '.number_format((double)$discount, 2);
+                            }
+                        }
+                    }
+
+                    if(strtoupper(trim($kode_file)) == 'A') {
+                        if((double)$discount > 0 && (double)$result->disc_detail > 0) {
+                            $notes_diskon = '*) Part number di diskon 2x';
+                        }
+                    }
+
+                    $data_detail_order[] = [
+                        'part_number'       => strtoupper(trim($result->part_number)),
+                        'part_description'  => strtoupper(trim($result->part_description)),
+                        'part_pictures'     => config('constants.app.app_images_url').'/'.strtoupper(trim($result->part_number)).'.jpg',
+                        'item_group'        => strtoupper(trim($result->item_group)),
+                        'order_quantity'    => (double)$result->order_quantity,
+                        'served_quantity'   => (double)$result->served_quantity,
+                        'amount'            => (double)$result->amount,
+                        'discount'          => (double)$result->disc_detail,
+                        'amount_total'      => (double)$result->amount_total,
+                        'status_faktur'     => (int)$result->status_faktur_detail,
+                        'notes_diskon'      => trim($notes_diskon),
+                        'notes_harga'       => trim($notes_harga),
+                        'notes_bo'          => trim($notes_bo),
+                        'notes_marketing'   => trim($notes_marketing),
+                    ];
+                }
             }
 
             $data = [
-                'data'  => $result_order->first()
+                'data'  => [
+                    'order_code'            => strtoupper(trim($order_code)),
+                    'order_date'            => strtoupper(trim($order_date))." ".date('h:i:s'),
+                    'sales_code'            => strtoupper(trim($sales_code)),
+                    'sales_name'            => strtoupper(trim($sales_name)),
+                    'dealer_code'           => strtoupper(trim($dealer_code)),
+                    'dealer_name'           => strtoupper(trim($dealer_name)),
+                    'keterangan'            => strtoupper(trim($keterangan)),
+                    'tpc_code'              => strtoupper(trim($tpc_code)),
+                    'tanggal_jatuh_tempo'   => strtoupper(trim($tanggal_jatuh_tempo))." ".date('h:i:s'),
+                    'umur_pof'              => (double)$umur_pof,
+                    'back_order'            => strtoupper(trim($back_order)),
+                    'discount'              => (double)$discount,
+                    'total'                 => (double)$total,
+                    'approve'               => (int)$approve,
+                    'approve_user'          => strtoupper(trim($approve_user)),
+                    'usertime'              => strtoupper(trim($usertime)),
+                    'status_faktur'         => (int)$status_faktur,
+                    'page'                  => $request->get('page'),
+                    'detail'                => $data_detail_order
+                ]
             ];
 
             return ApiResponse::responseSuccess('success', $data);
