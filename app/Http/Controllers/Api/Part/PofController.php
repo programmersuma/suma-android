@@ -195,6 +195,7 @@ class PofController extends Controller
             $usertime = strtoupper(trim($sql->usertime));
             $status_faktur = (int)$sql->status_faktur_header;
             $kode_file = strtoupper(trim($sql->kode_file));
+            $data_detail_order = [];
 
             $sql = DB::connection($request->get('divisi'))
                     ->table('pof_dtl')->lock('with (nolock)')
