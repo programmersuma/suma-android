@@ -7,6 +7,7 @@ use App\Helpers\ApiResponse;
 use App\Exports\ReadyStock;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -231,29 +232,16 @@ class PartController extends Controller {
 
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
-                // Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
+                Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
 
-                $blobData = Excel::download(new ReadyStock($data, $request), 'readystock.xlsx');
-                $temporaryFilePath = tempnam(sys_get_temp_dir(), 'temp_file_');
-                file_put_contents($temporaryFilePath, $blobData);
+                // Replace 'path/to/your/file.txt' with the actual file path
+                $filePath = public_path().'/excel/readystock/readystock.xlsx';
 
-                $uploadedFile = new \Illuminate\Http\UploadedFile(
-                    $temporaryFilePath,
-                    'nama_file_baru.xlsx',
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    null,
-                    true
-                );
+                // Create a new UploadedFile instance from the file path
+                $uploadedFile = new UploadedFile($filePath, basename($filePath));
 
-                $request->merge(['file' => $uploadedFile]);
-
-                $value = $request->file;
-                $nama_file =  trim(pathinfo($value->getClientOriginalName(), PATHINFO_FILENAME)).'.xlsx';
-                $value->move('excel/readystock', $nama_file);
-                // Kemudian, Anda dapat menggunakan $request->file('file') untuk mendapatkan objek UploadedFile
-
-                // Lakukan operasi lain dengan request...
-
+                $request = new Request();
+                $request->file('excel/readystock', $uploadedFile);
             } else {
                 return $responseApi;
             }
