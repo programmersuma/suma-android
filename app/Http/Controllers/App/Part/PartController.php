@@ -7,6 +7,7 @@ use App\Helpers\ApiResponse;
 use App\Exports\ReadyStock;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
@@ -215,7 +216,12 @@ class PartController extends Controller {
 
     public function readyStock(Request $request) {
         try {
-            $url = 'part/ready-stock';
+
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+
+        $url = 'part/ready-stock';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'page'          => $request->get('page'),
@@ -232,22 +238,23 @@ class PartController extends Controller {
 
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
-                Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
+                $file = Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
 
-                // Replace 'path/to/your/file.txt' with the actual file path
                 $filePath = public_path().'/excel/readystock/readystock.xlsx';
+                $file = new File($filePath);
 
-                // Create a new UploadedFile instance from the file path
-                $uploadedFile = new UploadedFile($filePath, basename($filePath));
+                $uploadedFile = new UploadedFile(
+                    $file->getRealPath(),
+                    $file->getFilename(),
+                    $file->getMimeType(),
+                    null,
+                    true
+                );
 
-                $request = new Request();
-                $request->file('readystock.xlsx', $uploadedFile)->move('excel/readystock', 'readystock.xlsx');
-
+                $destinationPath = public_path('excel/readystock/download');
+                $uploadedFile->move($destinationPath, $uploadedFile->getClientOriginalName());
             } else {
                 return $responseApi;
             }
-        } catch (\Exception $exception) {
-            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
-        }
     }
 }
