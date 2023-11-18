@@ -1,0 +1,13 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/sumahond/suma.android/
+    - /bin/cp -R public/* $DEPLOYPATH
+    - export DEPLOYPATH=/home/sumahond/suma.android/assets
+    - /bin/cp -R public/assets/* $DEPLOYPATH
+    - export DEPLOYPATH=/home/sumahond/suma.android/vendor
+    - /bin/cp -R public/vendor/* $DEPLOYPATH
+    - export DEPLOYPATH=/home/sumahond/suma.android/storage
+    - /bin/cp -R public/storage/* $DEPLOYPATH
+    - export DEPLOYPATH=/home/sumahond/suma.android/index.php
+    - /bin/cp -R public/index.php $DEPLOYPATH

@@ -232,9 +232,7 @@ class PartController extends Controller {
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
 
-
-                 // Mendapatkan blob data dari suatu sumber (contoh: kolom blob dalam database)
-                $blobData = Excel::download(new ReadyStock($data, $request), 'readystock.xlsx');// Anda perlu menggantinya sesuai dengan implementasi aplikasi Anda
+                $blobData = Excel::download(new ReadyStock($data, $request), 'readystock.xlsx');
 
                 // Simpan blob data ke file sementara pada server
                 $temporaryFilePath = tempnam(sys_get_temp_dir(), 'temp_file_');
@@ -251,7 +249,7 @@ class PartController extends Controller {
 
                 // Menambahkan file ke dalam request
                 $request->merge(['file' => $uploadedFile]);
-                $uploadedFile->move('excel/readystock', 'testing_excel_harus_bisa.xlsx');
+                $uploadedFile->move('excel/readystock', trim(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME)) . '.xlsx');
 
                 // Kemudian, Anda dapat menggunakan $request->file('file') untuk mendapatkan objek UploadedFile
 
