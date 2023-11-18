@@ -234,7 +234,7 @@ class PartController extends Controller {
                 Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
 
                 $sourcePath = public_path().'/excel/readystock/readystock.xlsx';
-                $destinationPath = public_path().'/excel/readystock/';
+                $destinationPath = 'suma.android/excel/readystock/';
 
                 Storage::move($sourcePath, $destinationPath);
             } else {
