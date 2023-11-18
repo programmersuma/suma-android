@@ -235,7 +235,7 @@ class PartController extends Controller {
 
                 $request = public_path('/excel/readystock/readystock.xlsx');
 
-                $destination = '/home/sumahond/suma.android/excel/readystock/readystock.xlsx';
+                $destination = '/home/sumahond/suma.android/excel/readystock/';
 
                 if (file_exists($request)) {
                     if (copy($request, $destination)) {
