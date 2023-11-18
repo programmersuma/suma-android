@@ -231,30 +231,7 @@ class PartController extends Controller {
 
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
-
-                $blobData = Excel::download(new ReadyStock($data, $request), 'readystock.xlsx');
-
-                // Simpan blob data ke file sementara pada server
-                $temporaryFilePath = tempnam(sys_get_temp_dir(), 'temp_file_');
-                file_put_contents($temporaryFilePath, $blobData);
-
-                // Buat objek UploadedFile dari file sementara
-                $uploadedFile = new \Illuminate\Http\UploadedFile(
-                    $temporaryFilePath,
-                    'nama_file_baru.xlsx',
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    null,
-                    true
-                );
-
-                // Menambahkan file ke dalam request
-                $request->merge(['file' => $uploadedFile]);
-                $uploadedFile->move('excel/readystock', trim(pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME)) . '.xlsx');
-
-                // Kemudian, Anda dapat menggunakan $request->file('file') untuk mendapatkan objek UploadedFile
-
-                // Lakukan operasi lain dengan request...
-
+                Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
             } else {
                 return $responseApi;
             }
