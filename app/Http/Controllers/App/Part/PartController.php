@@ -7,6 +7,7 @@ use App\Helpers\ApiResponse;
 use App\Exports\ReadyStock;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class PartController extends Controller {
@@ -230,7 +231,13 @@ class PartController extends Controller {
 
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
-                return Excel::store(new ReadyStock($data, $request), '/public/readystock/readystock.xlsx');
+                Excel::store(new ReadyStock($data, $request), '/public/readystock/readystock.xlsx');
+                // dd(storage_path('app/public').'/readystock/readystock.xlsx');
+                // $sourcePath = storage_path('app/public').'/readystock/readystock.xlsx';
+                // $destinationDirectory = public_path('readystock');
+                // $destinationFileName = 'file.xlsx';
+
+                // Storage::putFileAs($destinationDirectory, $sourcePath, $destinationFileName);
             } else {
                 return $responseApi;
             }
