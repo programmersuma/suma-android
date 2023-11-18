@@ -231,13 +231,9 @@ class PartController extends Controller {
 
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
-                Excel::store(new ReadyStock($data, $request), '/public/readystock/readystock.xlsx');
-                // dd(storage_path('app/public').'/readystock/readystock.xlsx');
-                // $sourcePath = storage_path('app/public').'/readystock/readystock.xlsx';
-                // $destinationDirectory = public_path('readystock');
-                // $destinationFileName = 'file.xlsx';
+                Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
 
-                // Storage::putFileAs($destinationDirectory, $sourcePath, $destinationFileName);
+                dd('oke');
             } else {
                 return $responseApi;
             }
