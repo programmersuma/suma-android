@@ -251,8 +251,7 @@ class PartController extends Controller {
                     true
                 );
 
-                $destinationPath = public_path('excel/readystock/download');
-                $uploadedFile->move($destinationPath, $uploadedFile->getClientOriginalName());
+                $uploadedFile->move('excel/readystock', $uploadedFile->getClientOriginalName());
             } else {
                 return $responseApi;
             }
