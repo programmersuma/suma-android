@@ -241,7 +241,8 @@ class PartController extends Controller {
                 $uploadedFile = new UploadedFile($filePath, basename($filePath));
 
                 $request = new Request();
-                $request->file('excel/readystock', $uploadedFile);
+                $request->file('readystock.xlsx', $uploadedFile)->move('excel/readystock', 'readystock.xlsx');
+
             } else {
                 return $responseApi;
             }
