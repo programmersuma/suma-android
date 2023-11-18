@@ -233,7 +233,20 @@ class PartController extends Controller {
                 $data =  json_decode($responseApi)->data;
                 Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
 
-                dd('oke');
+                $request = public_path('/excel/readystock/readystock.xlsx');
+
+                $destination = '/home/sumahond/suma.android/excel/readystock';
+
+                if (file_exists($request)) {
+                    if (copy($request, $destination)) {
+                        echo "File berhasil disalin.";
+                        unlink($request);
+                    } else {
+                        echo "Gagal menyalin file.";
+                    }
+                } else {
+                    echo "File sumber tidak ditemukan.";
+                }
             } else {
                 return $responseApi;
             }
