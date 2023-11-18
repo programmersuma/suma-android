@@ -89,6 +89,77 @@ class PartController extends Controller {
         }
     }
 
+    public function listItemClassProduk(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required'
+            ]);
+
+            if($validate->fails()) {
+                return ApiResponse::responseWarning('Pilih data divisi terlebih dahulu');
+            }
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('classprod')->lock('with (nolock)')
+                    ->selectRaw("isnull(classprod.id, 0) as id,
+                                isnull(classprod.kd_class, '') as kode_class,
+                                isnull(classprod.nama, '') as nama_class,
+                                0 as favorite");
+
+            if(!empty('search') && trim($request->get('search') != '')) {
+                $sql->where('classprod.kd_class', 'like', strtoupper(trim($request->get('search'))).'%')
+                    ->orWhere('classprod.nama', 'like', strtoupper(trim($request->get('search'))).'%');
+            }
+
+            $sql = $sql->orderBy('classprod.kd_class', 'asc')
+                        ->paginate(10);
+
+            $result = collect($sql)->toArray();
+            $data_result = $result['data'];
+
+            $data_favorite = [];
+            $data_list_produk = [];
+            $jumlah_data = 0;
+
+            foreach($data_result as $result) {
+                if((int)$result->favorite == 1) {
+                    $data_favorite[] = [
+                        'id'    => (int)$result->id,
+                        'code'  => strtoupper(trim($result->kode_class)),
+                        'name'  => strtoupper(trim($result->nama_class))
+                    ];
+                }
+                if(empty('search') || trim($request->get('search') == '')) {
+                    if((int)$jumlah_data == 0 && $request->get('page') == 1) {
+                        $data_list_produk[] = [
+                            'id'    => 0,
+                            'code'  => 'ALL',
+                            'name'  => 'SEMUA'
+                        ];
+                    }
+                }
+                $data_list_produk[] = [
+                    'id'    => (int)$result->id,
+                    'code'  => strtoupper(trim($result->kode_class)),
+                    'name'  => strtoupper(trim($result->nama_class))
+                ];
+                $jumlah_data = (int)$jumlah_data + 1;
+            }
+
+            $data = [
+                'data' => [
+                    'favorit'   => $data_favorite,
+                    'list'      => $data_list_produk
+                ]
+            ];
+
+            return ApiResponse::responseSuccess('success', $data);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
+
     public function listItemGroup(Request $request) {
         try {
             $validate = Validator::make($request->all(), [
@@ -101,7 +172,7 @@ class PartController extends Controller {
 
             $sql = DB::connection($request->get('divisi'))
                     ->table('produk')->lock('with (nolock)')
-                    ->selectRaw("isnull(produk.id_mobile, 0) as id,
+                    ->selectRaw("isnull(produk.id, 0) as id,
                                 isnull(produk.kd_produk, '') as kode_produk,
                                 isnull(produk.nama, '') as nama_produk,
                                 iif(isnull(produk_fav.kd_produk, '')='', 0, 1) as favorite")
@@ -110,6 +181,10 @@ class PartController extends Controller {
                             ->on('produk_fav.user_id', '=', DB::raw("'".strtoupper(trim($request->userlogin['user_id']))."'"))
                             ->on('produk_fav.companyid', '=', DB::raw("'".strtoupper(trim($request->userlogin['companyid']))."'"));
                     });
+
+            if(!empty('classproduk') && trim($request->get('classproduk') != '')) {
+                $sql->where('produk.kd_class', strtoupper(trim($request->get('classproduk'))));
+            }
 
             if(!empty('search') && trim($request->get('search') != '')) {
                 $sql->where('produk.kd_produk', 'like', strtoupper(trim($request->get('search'))).'%')
@@ -147,6 +222,81 @@ class PartController extends Controller {
                     'id'    => (int)$result->id,
                     'code'  => strtoupper(trim($result->kode_produk)),
                     'name'  => strtoupper(trim($result->nama_produk))
+                ];
+                $jumlah_data = (int)$jumlah_data + 1;
+            }
+
+            $data = [
+                'data' => [
+                    'favorit'   => $data_favorite,
+                    'list'      => $data_list_produk
+                ]
+            ];
+
+            return ApiResponse::responseSuccess('success', $data);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
+
+    public function listItemSubProduk(Request $request) {
+        try {
+            $validate = Validator::make($request->all(), [
+                'divisi'    => 'required'
+            ]);
+
+            if($validate->fails()) {
+                return ApiResponse::responseWarning('Pilih data divisi terlebih dahulu');
+            }
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('sub')->lock('with (nolock)')
+                    ->selectRaw("isnull(sub.id, 0) as id,
+                                isnull(sub.kd_sub, '') as kode_sub,
+                                isnull(sub.nama, '') as nama_sub,
+                                0 as favorite");
+
+            if(!empty('produk') && trim($request->get('produk') != '')) {
+                $sql->where('sub.kd_produk', strtoupper(trim($request->get('produk'))));
+            }
+
+            if(!empty('search') && trim($request->get('search') != '')) {
+                $sql->where('sub.kd_class', 'like', strtoupper(trim($request->get('search'))).'%')
+                    ->orWhere('sub.nama', 'like', strtoupper(trim($request->get('search'))).'%');
+            }
+
+            $sql = $sql->orderBy('sub.kd_sub', 'asc')
+                        ->paginate(10);
+
+            $result = collect($sql)->toArray();
+            $data_result = $result['data'];
+
+            $data_favorite = [];
+            $data_list_produk = [];
+            $jumlah_data = 0;
+
+            foreach($data_result as $result) {
+                if((int)$result->favorite == 1) {
+                    $data_favorite[] = [
+                        'id'    => (int)$result->id,
+                        'code'  => strtoupper(trim($result->kode_sub)),
+                        'name'  => strtoupper(trim($result->nama_sub))
+                    ];
+                }
+                if(empty('search') || trim($request->get('search') == '')) {
+                    if((int)$jumlah_data == 0 && $request->get('page') == 1) {
+                        $data_list_produk[] = [
+                            'id'    => 0,
+                            'code'  => 'ALL',
+                            'name'  => 'SEMUA'
+                        ];
+                    }
+                }
+                $data_list_produk[] = [
+                    'id'    => (int)$result->id,
+                    'code'  => strtoupper(trim($result->kode_sub)),
+                    'name'  => strtoupper(trim($result->nama_sub))
                 ];
                 $jumlah_data = (int)$jumlah_data + 1;
             }
@@ -208,7 +358,7 @@ class PartController extends Controller {
                     $sql->leftJoin(DB::raw('produk with (nolock)'), function($join) {
                             $join->on('produk.kd_produk', '=', 'sub.kd_produk');
                         });
-                    $sql->where('produk.id_mobile', $request->get('item_group'));
+                    $sql->where('produk.id', $request->get('item_group'));
                 }
             }
 
@@ -1346,6 +1496,104 @@ class PartController extends Controller {
             $data_result = $result['data'];
 
             return ApiResponse::responseSuccess('success', $data_result);
+        } catch (\Exception $exception) {
+            return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
+                $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
+        }
+    }
+
+    public function readyStock(Request $request) {
+        try {
+            $sql = "select	isnull(part.companyid, '') as companyid, isnull(part.kd_part, '') as part_number,
+                            isnull(part.ket, '') as nama_part, isnull(part.kd_class, '') as class_produk,
+                            isnull(part.kd_produk, '') as produk, isnull(part.kd_sub, '') as sub_produk,
+                            iif(isnull(part.frg, '')='F', 'FIX', 'REGULER') as frg,
+                            isnull(part.het, 0) as het, isnull(part.stock, 0) as stock
+                    from
+                    (
+                        select
+                                part.companyid, part.kd_part, part.ket, part.frg, part.het,
+                                part.kd_sub, part.kd_produk, part.kd_class,
+                                iif(isnull(part.stock, 0) - isnull(minshare.qtymkr, 0) - isnull(minshare.qtypc, 0) < 0, 0,
+                                    isnull(part.stock, 0) - isnull(minshare.qtymkr, 0) - isnull(minshare.qtypc, 0)) as stock
+                        from
+                        (
+                            select	part.companyid, part.kd_part, part.ket, part.frg, part.het,
+                                    isnull(sub.nama, '') as kd_sub,
+                                    isnull(produk.nama, '') as kd_produk,
+                                    isnull(classprod.nama, '') as kd_class,
+                                    isnull(tbstlokasirak.stock, 0) -
+                                        (isnull(stlokasi.min, 0) + isnull(stlokasi.in_transit, 0) +
+                                        isnull(part.min_gudang, 0) + isnull(part.in_transit, 0) +
+                                        isnull(part.kanvas, 0) + isnull(part.min_htl, 0)) as stock
+
+                            from
+                            (
+                                select	part.companyid, part.kd_part, part.ket, part.kd_sub, part.frg, part.het,
+                                        part.in_transit, part.min_gudang, part.kanvas, part.min_htl
+                                from	part with (nolock)
+                                where	part.companyid='".$request->userlogin['companyid']."' and
+                                        part.kd_sub <> 'DSTO' and
+                                        isnull(part.del_send, 0) = 0";
+
+            if(!empty($request->get('frg')) && trim($request->get('frg')) != '') {
+                $sql .= " and part.frg='".strtoupper(trim($request->get('frg')))."'";
+            }
+
+            $sql .= " )	part
+                                    inner join company with (nolock) on part.companyid=company.companyid
+                                    left join sub on part.kd_sub=sub.kd_sub
+                                    left join produk on sub.kd_produk=produk.kd_produk
+                                    left join classprod on produk.kd_class=classprod.kd_class
+                                    left join stlokasi with (nolock) on part.kd_part=stlokasi.kd_part and
+                                                company.kd_lokasi=stlokasi.kd_lokasi and
+                                                part.companyid=stlokasi.companyid
+                                    left join tbstlokasirak with (nolock) on part.kd_part=tbstlokasirak.kd_part and
+                                                company.kd_lokasi=tbstlokasirak.kd_lokasi and
+                                                company.kd_rak=tbstlokasirak.kd_rak and
+                                                part.companyid=tbstlokasirak.companyid
+                            where   part.companyid is not null";
+
+            if(!empty($request->get('class_produk')) && trim($request->get('class_produk')) != '') {
+                $sql .= " and classprod.kd_class='".strtoupper(trim($request->get('class_produk')))."'";
+            }
+
+            if(!empty($request->get('produk')) && trim($request->get('produk')) != '') {
+                $sql .= " and produk.kd_produk='".strtoupper(trim($request->get('produk')))."'";
+            }
+
+            if(!empty($request->get('sub_produk')) && trim($request->get('sub_produk')) != '') {
+                $sql .= " and sub.kd_sub='".strtoupper(trim($request->get('sub_produk')))."'";
+            }
+
+            $sql .= " )	part
+                                left join minshare with (nolock) on part.kd_part=minshare.kd_part and
+                                            part.companyid=minshare.companyid
+                    )	part";
+
+            if(strtoupper(trim($request->get('status_stock'))) == 'READY_STOCK') {
+                $sql .= "  where part.stock > 0 ";
+            }
+
+            $sql .= " order by part.kd_part asc";
+
+            $result = DB::connection($request->get('divisi'))->select($sql);
+
+            $data_ready_stock = [];
+
+            foreach($result as $data) {
+                $data_ready_stock[] = [
+                    'part_number'   => strtoupper(trim($data->part_number)),
+                    'nama_part'     => strtoupper(trim($data->nama_part)),
+                    'class_produk'  => strtoupper(trim($data->class_produk)),
+                    'produk'        => strtoupper(trim($data->produk)),
+                    'sub_produk'    => strtoupper(trim($data->sub_produk)),
+                    'frg'           => strtoupper(trim($data->frg)),
+                    'het'           => (double)$data->het,
+                ];
+            }
+
+            return ApiResponse::responseSuccess('success', $data_ready_stock);
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');

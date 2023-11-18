@@ -99,13 +99,16 @@ Route::group(['middleware' => 'checkToken'], function() {
 
     Route::controller(PartController::class)->group(function () {
         Route::post('part/list-motor-type', 'listMotorType');
+        Route::post('part/list-item-class-produk', 'listItemClassProduk');
         Route::post('part/list-item-group', 'listItemGroup');
+        Route::post('part/list-item-sub-produk', 'listItemSubProduk');
         Route::post('part/part-search', 'partSearch');
         Route::post('part/part-favorite', 'listPartFavorite');
         Route::post('part/add-favorite', 'addPartFavorite');
         Route::post('part/list-back-order', 'listBackOrder');
         Route::post('part/skema-pembelian', 'skemaPembelian');
         Route::post('part/price-list', 'priceList');
+        Route::post('part/ready-stock', 'readyStock');
 
         Route::post('part/check-stock', 'partSearch');
     });

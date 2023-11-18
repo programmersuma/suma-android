@@ -4,8 +4,10 @@ namespace App\Http\Controllers\App\Part;
 
 use App\Helpers\ApiRequest;
 use App\Helpers\ApiResponse;
+use App\Exports\ReadyStock;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PartController extends Controller {
 
@@ -26,14 +28,50 @@ class PartController extends Controller {
         }
     }
 
-    public function listItemGroup(Request $request) {
+    public function listItemClassProduk(Request $request) {
         try {
-            $url = 'part/list-item-group';
+            $url = 'part/list-item-class-produk';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'page'      => $request->get('page'),
                 'search'    => $request->get('search'),
                 'divisi'  => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
+    public function listItemGroup(Request $request) {
+        try {
+            $url = 'part/list-item-group';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'page'          => $request->get('page'),
+                'classproduk'   => $request->get('classproduk'),
+                'search'        => $request->get('search'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
+    public function listItemSubProduk(Request $request) {
+        try {
+            $url = 'part/list-item-sub-produk';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'page'      => $request->get('page'),
+                'produk'    => $request->get('produk'),
+                'search'    => $request->get('search'),
+                'divisi'    => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
 
@@ -168,6 +206,34 @@ class PartController extends Controller {
             $response = ApiRequest::requestPost($url, $header, $body);
 
             return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
+    public function readyStock(Request $request) {
+        try {
+            $url = 'part/ready-stock';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'page'          => $request->get('page'),
+                'class_produk'  => $request->get('class_produk'),
+                'produk'        => $request->get('produk'),
+                'sub_produk'    => $request->get('sub_produk'),
+                'frg'           => $request->get('frg'),
+                'status_stock'  => $request->get('status_stock'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $responseApi = ApiRequest::requestPost($url, $header, $body);
+            $statusApi = json_decode($responseApi)->status;
+            $messageApi =  json_decode($responseApi)->message[0];
+
+            if($statusApi == 1) {
+                $data =  json_decode($responseApi)->data;
+                return Excel::store(new ReadyStock($data, $request), '/public/readystock/readystock.xlsx');
+            } else {
+                return $responseApi;
+            }
         } catch (\Exception $exception) {
             return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
         }
