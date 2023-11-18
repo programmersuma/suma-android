@@ -231,12 +231,29 @@ class PartController extends Controller {
 
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
-                Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
+                // Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
 
-                $sourcePath = public_path().'/excel/readystock/readystock.xlsx';
-                $destinationPath = 'suma.android/excel/readystock/';
+                $blobData = Excel::download(new ReadyStock($data, $request), 'readystock.xlsx');
+                $temporaryFilePath = tempnam(sys_get_temp_dir(), 'temp_file_');
+                file_put_contents($temporaryFilePath, $blobData);
 
-                Storage::move($sourcePath, $destinationPath);
+                $uploadedFile = new \Illuminate\Http\UploadedFile(
+                    $temporaryFilePath,
+                    'nama_file_baru.xlsx',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    null,
+                    true
+                );
+
+                $request->merge(['file' => $uploadedFile]);
+
+                $value = $request->file;
+                $nama_file =  trim(pathinfo($value->getClientOriginalName(), PATHINFO_FILENAME)).'.xlsx';
+                $value->move('excel/readystock', $nama_file);
+                // Kemudian, Anda dapat menggunakan $request->file('file') untuk mendapatkan objek UploadedFile
+
+                // Lakukan operasi lain dengan request...
+
             } else {
                 return $responseApi;
             }
