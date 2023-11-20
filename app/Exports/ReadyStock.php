@@ -5,8 +5,10 @@ namespace App\Exports;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class ReadyStock implements FromCollection, WithHeadings, ShouldAutoSize
+class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting, ShouldAutoSize
 {
     private $data;
     private $request;
@@ -45,5 +47,18 @@ class ReadyStock implements FromCollection, WithHeadings, ShouldAutoSize
 
 
         return $header;
+    }
+
+    public function columnFormats(): array {
+        return [
+            'A' => NumberFormat::FORMAT_GENERAL,
+            'B' => NumberFormat::FORMAT_TEXT,
+            'C' => NumberFormat::FORMAT_TEXT,
+            'D' => NumberFormat::FORMAT_TEXT,
+            'E' => NumberFormat::FORMAT_TEXT,
+            'F' => NumberFormat::FORMAT_TEXT,
+            'G' => NumberFormat::FORMAT_TEXT,
+            'H' => NumberFormat::FORMAT_GENERAL,
+        ];
     }
 }
