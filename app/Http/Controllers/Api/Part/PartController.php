@@ -1580,9 +1580,13 @@ class PartController extends Controller {
             $result = DB::connection($request->get('divisi'))->select($sql);
 
             $data_ready_stock = [];
+            $nomor_urut = 0;
 
             foreach($result as $data) {
+                $nomor_urut = (double)$nomor_urut + 1;
+
                 $data_ready_stock[] = [
+                    'no'            => (double)$nomor_urut,
                     'part_number'   => strtoupper(trim($data->part_number)),
                     'nama_part'     => strtoupper(trim($data->nama_part)),
                     'class_produk'  => strtoupper(trim($data->class_produk)),
