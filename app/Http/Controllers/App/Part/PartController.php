@@ -216,15 +216,10 @@ class PartController extends Controller {
 
     public function readyStock(Request $request) {
         try {
-
-        } catch (\Exception $exception) {
-            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
-        }
-
-        $url = 'part/ready-stock';
+            $url = 'part/ready-stock';
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
-                'page'          => $request->get('page'),
+                'nama_file'     => $request->get('nama_file'),
                 'class_produk'  => $request->get('class_produk'),
                 'produk'        => $request->get('produk'),
                 'sub_produk'    => $request->get('sub_produk'),
@@ -238,9 +233,9 @@ class PartController extends Controller {
 
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
-                $file = Excel::store(new ReadyStock($data, $request), '/excel/readystock/readystock.xlsx');
+                $file = Excel::store(new ReadyStock($data, $request), '/excel/readystock/'.trim($request->get('nama_file')).'.xlsx');
 
-                $filePath = public_path().'/excel/readystock/readystock.xlsx';
+                $filePath = public_path().'/excel/readystock/'.trim($request->get('nama_file')).'.xlsx';
                 $file = new File($filePath);
 
                 $uploadedFile = new UploadedFile(
@@ -252,8 +247,19 @@ class PartController extends Controller {
                 );
 
                 $uploadedFile->move('excel/readystock', $uploadedFile->getClientOriginalName());
+
+                return [
+                    'status'    => $statusApi,
+                    'message'   => $messageApi,
+                    'data'      => [
+                        'link_download' => env('APP_URL').'excel/readystock/'.trim($request->get('nama_file')).'.xlsx'
+                    ]
+                ];
             } else {
                 return $responseApi;
             }
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
     }
 }
