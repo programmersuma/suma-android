@@ -1589,10 +1589,6 @@ class PartController extends Controller {
                     'no'            => (double)$nomor_urut,
                     'part_number'   => strtoupper(trim($data->part_number)),
                     'nama_part'     => strtoupper(trim($data->nama_part)),
-                    'class_produk'  => strtoupper(trim($data->class_produk)),
-                    'produk'        => strtoupper(trim($data->produk)),
-                    'sub_produk'    => strtoupper(trim($data->sub_produk)),
-                    'frg'           => strtoupper(trim($data->frg)),
                     'het'           => (double)$data->het,
                 ];
             }

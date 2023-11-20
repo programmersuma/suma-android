@@ -234,7 +234,7 @@ class PartController extends Controller {
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
 
-                $file = Excel::store(new ReadyStock($data, $request), '/excel/readystock/'.trim($request->get('nama_file')).'.xlsx');
+                $file = Excel::store(new ReadyStock($data, $request, trim($request->get('nama_file'))), '/excel/readystock/'.trim($request->get('nama_file')).'.xlsx');
 
                 $filePath = public_path().'/excel/readystock/'.trim($request->get('nama_file')).'.xlsx';
                 $file = new File($filePath);

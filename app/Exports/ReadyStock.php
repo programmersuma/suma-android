@@ -7,19 +7,22 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use Maatwebsite\Excel\Events\BeforeSheet;
 
 class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting, ShouldAutoSize
 {
     private $data;
     private $request;
+    private $nama_files;
 
     /**
     * @return \Illuminate\Support\Collection
     */
-    public function __construct($data, $request)
+    public function __construct($data, $request, $nama_file)
     {
         $this->data = $data;
         $this->request = $request;
+        $nama_files = $nama_file;
     }
 
     public function collection(){
@@ -36,12 +39,8 @@ class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting,
     {
         $header =  [
             'No',
-            'Part Number',
-            'Nama Part',
-            'Class Produk',
-            'Produk',
-            'Sub Produk',
-            'FRG',
+            'Part_Number',
+            'Description',
             'HET'
         ];
 
@@ -54,11 +53,20 @@ class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting,
             'A' => NumberFormat::FORMAT_GENERAL,
             'B' => NumberFormat::FORMAT_TEXT,
             'C' => NumberFormat::FORMAT_TEXT,
-            'D' => NumberFormat::FORMAT_TEXT,
-            'E' => NumberFormat::FORMAT_TEXT,
-            'F' => NumberFormat::FORMAT_TEXT,
-            'G' => NumberFormat::FORMAT_TEXT,
-            'H' => NumberFormat::FORMAT_GENERAL,
+            'D' => NumberFormat::FORMAT_GENERAL
+        ];
+    }
+
+    public function registerEvents(): array
+    {
+        // Append a row after the export has been completed
+        return [
+            AfterSheet::class => function (BeforeSheet $event) {
+                $event->sheet->appendRow(['Nama File : ', $this->nama_files]);
+                $event->sheet->appendRow(['Tanggal : ', date('Y-m-d His')]);
+                $event->sheet->appendRow(['']);
+                $event->sheet->appendRow(['']);
+            },
         ];
     }
 }
