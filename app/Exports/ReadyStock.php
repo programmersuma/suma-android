@@ -61,7 +61,7 @@ class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting,
     {
         // Append a row after the export has been completed
         return [
-            AfterSheet::class => function (BeforeSheet $event) {
+            BeforeSheet::class => function (BeforeSheet $event) {
                 $event->sheet->appendRow(['Nama File : ', $this->nama_files]);
                 $event->sheet->appendRow(['Tanggal : ', date('Y-m-d His')]);
                 $event->sheet->appendRow(['']);
