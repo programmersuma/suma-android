@@ -234,9 +234,10 @@ class PartController extends Controller {
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
 
-                $file = Excel::store(new ReadyStock($data, $request, trim($request->get('nama_file'))), '/excel/readystock/'.trim($request->get('nama_file')).'.xlsx');
+                $file_name = trim($request->get('nama_file')).'.xlsx';
+                $file = Excel::store(new ReadyStock($data, $request, $file_name), '/excel/readystock/'.$file_name);
 
-                $filePath = public_path().'/excel/readystock/'.trim($request->get('nama_file')).'.xlsx';
+                $filePath = public_path().'/excel/readystock/'.$file_name;
                 $file = new File($filePath);
 
                 $uploadedFile = new UploadedFile(
@@ -253,7 +254,7 @@ class PartController extends Controller {
                     'status'    => $statusApi,
                     'message'   => $messageApi,
                     'data'      => [
-                        'link_download' => env('APP_URL').'excel/readystock/'.trim($request->get('nama_file')).'.xlsx'
+                        'link_download' => env('APP_URL').'excel/readystock/'.$file_name
                     ]
                 ];
             } else {

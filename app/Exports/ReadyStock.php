@@ -8,12 +8,14 @@ use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use Maatwebsite\Excel\Events\BeforeSheet;
+use Maatwebsite\Excel\Events\AfterSheet;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
 class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting, ShouldAutoSize
 {
     private $data;
     private $request;
-    private $nama_files;
+    private $file_name;
 
     /**
     * @return \Illuminate\Support\Collection
@@ -22,29 +24,41 @@ class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting,
     {
         $this->data = $data;
         $this->request = $request;
-        $nama_files = $nama_file;
+        $this->file_name = $nama_file;
     }
 
     public function collection(){
         ini_set('memory_limit', '4096M');
         ini_set('max_execution_time', '0');
 
-        $data = $this->data;
+        $collection = collect($this->data);
 
-        return collect($data);
+        $headerRow = [
+            'NO',
+            'PART_NUMBER',
+            'DESCRIPTION',
+            'HET',
+        ];
+
+        $data = $collection->prepend($headerRow);
+        return $data;
     }
 
 
     public function headings(): array
     {
-        $header =  [
-            'No',
-            'Part_Number',
-            'Description',
-            'HET'
+        $header[] = [
+            'Nama File :',
+            $this->file_name,
         ];
-
-
+        $header[] = [
+            'Tanggal :',
+            date('Y-m-d h:i:s'),
+        ];
+        $header[] = [
+            ' ',
+            ' ',
+        ];
         return $header;
     }
 
@@ -54,19 +68,6 @@ class ReadyStock implements FromCollection, WithHeadings,  WithColumnFormatting,
             'B' => NumberFormat::FORMAT_TEXT,
             'C' => NumberFormat::FORMAT_TEXT,
             'D' => NumberFormat::FORMAT_GENERAL
-        ];
-    }
-
-    public function registerEvents(): array
-    {
-        // Append a row after the export has been completed
-        return [
-            BeforeSheet::class => function (BeforeSheet $event) {
-                $event->sheet->appendRow(['Nama File : ', $this->nama_files]);
-                $event->sheet->appendRow(['Tanggal : ', date('Y-m-d His')]);
-                $event->sheet->appendRow(['']);
-                $event->sheet->appendRow(['']);
-            },
         ];
     }
 }
