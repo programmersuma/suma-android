@@ -1581,8 +1581,10 @@ class PartController extends Controller {
 
             $data_ready_stock = [];
             $nomor_urut = 0;
+            $jumlah_data = 0;
 
             foreach($result as $data) {
+                $jumlah_data = (double)$jumlah_data + 1;
                 $nomor_urut = (double)$nomor_urut + 1;
 
                 $data_ready_stock[] = [
@@ -1591,6 +1593,10 @@ class PartController extends Controller {
                     'nama_part'     => strtoupper(trim($data->nama_part)),
                     'het'           => (double)$data->het,
                 ];
+            }
+
+            if((double)$jumlah_data <= 0) {
+                ApiResponse::responseWarning('Tidak ada data yang ditemukan');
             }
 
             return ApiResponse::responseSuccess('success', $data_ready_stock);
