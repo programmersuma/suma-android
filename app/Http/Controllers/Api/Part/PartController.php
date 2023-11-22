@@ -1596,7 +1596,7 @@ class PartController extends Controller {
             }
 
             if((double)$jumlah_data <= 0) {
-                ApiResponse::responseWarning('Tidak ada data yang ditemukan');
+                return ApiResponse::responseWarning('Tidak ada data yang ditemukan');
             }
 
             return ApiResponse::responseSuccess('success', $data_ready_stock);

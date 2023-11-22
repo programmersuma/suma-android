@@ -231,6 +231,7 @@ class PartController extends Controller {
             $statusApi = json_decode($responseApi)->status;
             $messageApi =  json_decode($responseApi)->message[0];
 
+
             if($statusApi == 1) {
                 $data =  json_decode($responseApi)->data;
 
