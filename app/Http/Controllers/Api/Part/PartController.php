@@ -394,7 +394,7 @@ class PartController extends Controller {
                 });
             }
 
-            $result = $sql->limit(50)->get();
+            $result = $sql->limit(10)->get();
 
             $list_search_part = '';
             $data_part = new Collection();
