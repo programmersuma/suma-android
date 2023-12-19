@@ -188,10 +188,12 @@ class SuggestionController extends Controller
                     where   cast(round(iif(isnull(part.jumlah_order, 0) <= 0, 0,
                                 (((isnull(part.jumlah_order, 0)) / 3) +
                                     round(((((isnull(part.jumlah_order, 0)) / 3) * 10) / 100), 0)) - isnull(part.jumlah_bo, 0)
-                            ), 0) as decimal(13,0)) > 0
-                    order by part.kd_part asc";
+                            ), 0) as decimal(13,0)) > 0";
 
-            $result = DB::connection($request->get('divisi'))->select($sql);
+            $result = DB::connection($request->get('divisi'))
+                        ->table(DB::raw('('.$sql.') as suggestorder'))
+                        ->orderBy('suggestorder.part_number', 'asc')
+                        ->paginate(20);
 
             $data_suggestion_order = new Collection();
 

@@ -79,7 +79,7 @@ class NotificationController extends Controller
                     ->where('notification.user_id', strtoupper(trim($request->userlogin['user_id'])))
                     ->where('notification.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderBy('notification.id', 'desc')
-                    ->paginate(10);
+                    ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];

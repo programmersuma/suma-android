@@ -61,7 +61,7 @@ class PofController extends Controller
 
             $sql = $sql->groupByRaw("pof.companyid, pof.tgl_pof, pof.no_pof, pof.approve")
                         ->orderByRaw("pof.companyid asc,  pof.approve asc, pof.tgl_pof desc, pof.no_pof desc")
-                        ->paginate(10);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -197,6 +197,21 @@ class PofController extends Controller
             $kode_file = strtoupper(trim($sql->kode_file));
             $data_detail_order = [];
 
+            $sub_total = 0;
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('pof_dtl')->lock('with (nolock)')
+                    ->selectRaw("isnull(pof_dtl.no_pof, '') as nomor_pof,
+                                sum(isnull(pof_dtl.jumlah, 0)) as sub_total")
+                    ->where('pof_dtl.no_pof', strtoupper(trim($request->get('nomor_pof'))))
+                    ->where('pof_dtl.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->groupByRaw("isnull(pof_dtl.no_pof, '')")
+                    ->first();
+
+            if(!empty($sql->nomor_pof)) {
+                $sub_total = (double)$sql->sub_total;
+            }
+
             $sql = DB::connection($request->get('divisi'))
                     ->table('pof_dtl')->lock('with (nolock)')
                     ->selectRaw("isnull(pof_dtl.no_pof, '') as nomor_pof,
@@ -204,7 +219,7 @@ class PofController extends Controller
                     ->where('pof_dtl.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderByRaw("pof_dtl.kd_part asc")
-                    ->paginate(10);
+                    ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -338,6 +353,10 @@ class PofController extends Controller
                         'discount'          => (double)$result->disc_detail,
                         'amount_total'      => (double)$result->amount_total,
                         'status_faktur'     => (int)$result->status_faktur_detail,
+                        'disc_max_produk'   => (double)$result->disc_max_produk,
+                        'total_netto_part'  => (double)$result->total_netto_part,
+                        'harga_netto'       => (double)$result->hrg_netto,
+                        'harga_terendah'    => (double)$result->hrg_netto_part,
                         'notes_diskon'      => trim($notes_diskon),
                         'notes_harga'       => trim($notes_harga),
                         'notes_bo'          => trim($notes_bo),
@@ -359,6 +378,7 @@ class PofController extends Controller
                     'tanggal_jatuh_tempo'   => strtoupper(trim($tanggal_jatuh_tempo))." ".date('h:i:s'),
                     'umur_pof'              => (double)$umur_pof,
                     'back_order'            => strtoupper(trim($back_order)),
+                    'sub_total'             => (double)$sub_total,
                     'discount'              => (double)$discount,
                     'total'                 => (double)$total,
                     'approve'               => (int)$approve,

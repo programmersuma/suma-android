@@ -111,221 +111,272 @@ class CartController extends Controller {
             if(empty($sql->kode_dealer) || trim($sql->kode_dealer) == '') {
                 return ApiResponse::responseWarning('Kode dealer tidak ditemukan');
             }
+
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
+            $kode_key = strtoupper(trim($request->userlogin['user_id']))."/".strtoupper(trim($kode_dealer));
 
-            $sql = "select	'".trim($request->userlogin['id'])."' as id, isnull(carttmp.no_order, '') as no_order,
-                            isnull(company.kd_file, '') as kode_file, isnull(company.ppn, 0) as ppn,
-                            isnull(carttmp.total, 0) as total_price, isnull(carttmp.kd_tpc, '14') as tpc_code,
-                            isnull(carttmp.status, '') as status, isnull(carttmp.disc2, 0) as discount,
-                            isnull(carttmp.month_delivery, '') as month_delivery,
-                            isnull(msdealer.id, 0) as ms_dealer_id, isnull(carttmp.kd_dealer, '') as dealer_code,
-                            isnull(dealer.nm_dealer, '') as dealer_name, isnull(carttmp.kd_part, '') as part_number,
-                            isnull(carttmp.part_description, '') as part_description,
-                            isnull(carttmp.het, 0) as het, isnull(produk.nama, 0) as item_group,
-                            iif(isnull(carttmp.stock, 0) < 0, 0, isnull(carttmp.stock, 0)) as stock,
-                            isnull(carttmp.id_part, 0) as id_part, isnull(carttmp.jml_order, 0) as qty,
-                            isnull(carttmp.harga, 0) as sub_price, isnull(carttmp.disc1, 0) as disc_detail,
-                            isnull(carttmp.jumlah, 0) as amount_total, isnull(discp.discp, 0) as discount_produk,
-                            isnull(carttmp.hrg_netto, 0) as harga_netto_terendah,
-                            isnull(carttmp.hrg_pokok, 0) +
-                                round(((isnull(carttmp.hrg_pokok, 0) * isnull(company.ppn, 0)) / 100), 0) as harga_terendah,
-                            isnull(carttmp.harga, 0) -
-                                round(((isnull(carttmp.harga, 0) * isnull(carttmp.disc1, 0)) / 100), 0) -
-                                    round((((isnull(carttmp.harga, 0) -
-                                        round(((isnull(carttmp.harga, 0) * isnull(carttmp.disc1, 0)) / 100), 0)) *
-                                            isnull(carttmp.disc2, 0)) / 100), 0) as harga_netto_part,
-                            isnull(bo.jumlah, 0) as jumlah_bo, isnull(carttmp.usertime, '') usertime
-                    from
-                    (
-                        select	carttmp.companyid, carttmp.kd_key,
-                                carttmp.no_order, carttmp.tgl_order, carttmp.kd_sales,
-                                carttmp.kd_dealer, carttmp.kd_tpc, carttmp.status,
-                                carttmp.created_at, carttmp.updated_at, carttmp.month_delivery,
-                                carttmp.sub_total, carttmp.total, carttmp.disc2, company.kd_lokasi,
-                                mspart.id as id_part, cart_dtltmp.kd_part, part.ket as part_description, part.kd_sub,
-                                cart_dtltmp.jml_order, cart_dtltmp.harga, cart_dtltmp.disc1, cart_dtltmp.jumlah,
-                                part.het, part.jml1dus, part.hrg_netto, part.hrg_pokok,
-                                isnull(tbstlokasirak.stock, 0) -
-                                    (isnull(stlokasi.min, 0) + isnull(stlokasi.in_transit, 0) +
-                                        isnull(part.kanvas, 0) + isnull(part.min_gudang, 0) + isnull(part.in_transit, 0) +
-                                            isnull(part.konsinyasi, 0) + isnull(part.min_htl, 0)) as stock,
-                                cart_dtltmp.usertime
-                        from
-                        (
-                            select	carttmp.companyid, carttmp.kd_key, carttmp.no_order,
-                                    carttmp.tgl_order, carttmp.kd_sales, carttmp.kd_dealer, carttmp.kd_tpc,
-                                    carttmp.created_at, carttmp.updated_at, carttmp.sub_total,
-                                    carttmp.disc2, carttmp.total, carttmp.status,
-                                    carttmp.month_delivery
-                            from	carttmp with (nolock)
-                            where	carttmp.kd_key='".strtoupper(trim($request->userlogin['user_id']))."/".strtoupper(trim($kode_dealer))."' and
-                                    carttmp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
-                        )	carttmp
-                                inner join company with (nolock) on carttmp.companyid=company.companyid
-                                inner join cart_dtltmp with (nolock) on carttmp.kd_key=cart_dtltmp.kd_key and
-                                            carttmp.companyid=cart_dtltmp.companyid
-                                inner join mspart with (nolock) on cart_dtltmp.kd_part=mspart.kd_part
-                                left join part with (nolock) on cart_dtltmp.kd_part=part.kd_part and
-                                            carttmp.companyid=part.companyid
-                                left join stlokasi with (nolock) on cart_dtltmp.kd_part=stlokasi.kd_part and
-                                            company.kd_lokasi=stlokasi.kd_lokasi and
-                                            carttmp.companyid=stlokasi.companyid
-                                left join tbstlokasirak with (nolock) on cart_dtltmp.kd_part=tbstlokasirak.kd_part and
-                                            company.kd_lokasi=tbstlokasirak.kd_lokasi and
-                                            company.kd_rak=tbstlokasirak.kd_rak and
-                                            carttmp.companyid=tbstlokasirak.companyid
-                    )	carttmp
-                            inner join company with (nolock) on carttmp.companyid=company.companyid
-                            left join msdealer with (nolock) on carttmp.kd_dealer=msdealer.kd_dealer and
-                                        carttmp.companyid=msdealer.companyid
-                            left join dealer with (nolock) on carttmp.kd_dealer=dealer.kd_dealer and
-                                        carttmp.companyid=dealer.companyid
-                            left join sub with (nolock) on carttmp.kd_sub=sub.kd_sub
-                            left join produk with (nolock) on sub.kd_produk=produk.kd_produk
-                            left join bo with (nolock) on carttmp.kd_part=bo.kd_part and
-                                        carttmp.companyid=bo.companyid and
-                                        '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer
-                            left join discp with (nolock) on produk.kd_produk=discp.kd_produk and
-                                        discp.cabang=iif(isnull(company.inisial, 0) = 1, 'RK', 'PC')
-                    order by carttmp.usertime desc, carttmp.kd_part asc";
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('carttmp')->lock('with (nolock)')
+                    ->selectRaw("isnull(carttmp.kd_key, '') as kode_key, isnull(carttmp.no_order, '') as no_order,
+                                isnull(carttmp.kd_dealer, '') as dealer_code, isnull(dealer.nm_dealer, '') as dealer_name,
+                                isnull(carttmp.kd_tpc, 0) as tpc_code, isnull(carttmp.user_id, '') as user_id,
+                                isnull(carttmp.total, 0) as total_price, isnull(carttmp.sub_total, 0) as sub_price,
+                                isnull(carttmp.disc2, 0) as discount, count(cart_dtltmp.kd_key) as total_item")
+                    ->leftJoin(DB::raw('dealer with (nolock)'), function($join) {
+                        $join->on('dealer.kd_dealer', '=', 'carttmp.kd_dealer')
+                            ->on('dealer.companyid', '=', 'carttmp.companyid');
+                    })
+                    ->leftJoin(DB::raw('cart_dtltmp with (nolock)'), function($join) {
+                        $join->on('cart_dtltmp.kd_key', '=', 'carttmp.kd_key')
+                            ->on('cart_dtltmp.companyid', '=', 'carttmp.companyid');
+                    })
+                    ->where('carttmp.kd_key', strtoupper(trim($kode_key)))
+                    ->where('carttmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->groupByRaw("carttmp.kd_key, carttmp.no_order, carttmp.kd_dealer,
+                                dealer.nm_dealer, carttmp.kd_tpc, carttmp.user_id,
+                                carttmp.total, carttmp.sub_total, carttmp.disc2")
+                    ->first();
 
-            $result = DB::connection($request->get('divisi'))->select($sql);
+            if(empty($sql->no_order)) {
+                $data_cart_part = [
+                    'id'                => trim($request->userlogin['id']),
+                    'no_order'          => null,
+                    'dealer_code'       => strtoupper(trim($kode_dealer)),
+                    'dealer_name'       => null,
+                    'tpc_code'          => null,
+                    'users_id'          => (int)$request->userlogin['id'],
+                    'total_item'        => 0,
+                    'total_price'       => 0,
+                    'sub_price'         => 0,
+                    'discount'          => 0,
+                    'month_delivery'    => null,
+                    'total_next_page'   => 0,
+                    'detail'            => []
+                ];
 
+                $data_list_cart = [
+                    'data' => $data_cart_part
+                ];
+
+                return ApiResponse::responseSuccess('success', $data_list_cart);
+            }
+
+            $data_cart_part = [
+                'id'                => trim($request->userlogin['id']),
+                'no_order'          => $sql->no_order,
+                'dealer_code'       => $sql->dealer_code,
+                'dealer_name'       => $sql->dealer_name,
+                'tpc_code'          => (int)$sql->tpc_code,
+                'users_id'          => (int)$request->userlogin['id'],
+                'total_item'        => (double)$sql->total_item,
+                'total_price'       => (double)$sql->total_price,
+                'sub_price'         => (double)$sql->sub_price,
+                'discount'          => (double)$sql->discount,
+                'month_delivery'    => null
+            ];
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('cart_dtltmp')->lock('with (nolock)')
+                    ->selectRaw("isnull(cart_dtltmp.kd_part, '') as part_number")
+                    ->where('cart_dtltmp.kd_key', strtoupper(trim($kode_key)))
+                    ->where('cart_dtltmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->paginate(20);
+
+            $data = $sql->items();
+            $next_page = (double)$sql->total() - ((double)$sql->perPage() * $request->get('page'));
+            $total_next_page = ((double)$next_page <= 0) ? 0: $next_page;
+
+            $list_part_number = '';
             $jumlah_data = 0;
-            $data_detail_cart = [];
 
-            $id = 0;
-            $no_order = '';
-            $tpc_code = '14';
-            $grand_total_price = 0;
-            $total_sub_price = 0;
-            $discount = 0;
-            $month_delivery = 0;
-
-            foreach($result as $data) {
-                $id = (int)$data->id;
-                $no_order = strtoupper(trim($data->no_order));
-                $dealer_code = strtoupper(trim($data->dealer_code));
-                $dealer_name = strtoupper(trim($data->dealer_name));
-                $tpc_code = trim($data->tpc_code);
-                $grand_total_price = (double)$data->total_price;
-                $total_sub_price = (double)$total_sub_price + (double)$data->amount_total;
-                $discount = (double)$data->discount;
-                $month_delivery = null;
-
+            foreach($data as $data) {
                 $jumlah_data = (double)$jumlah_data + 1;
 
-                $available_part = '';
-
-                if((double)$data->stock <= 0) {
-                    $available_part = 'Not Available';
+                if(trim($list_part_number) == '') {
+                    $list_part_number = "'".strtoupper(trim($data->part_number))."'";
                 } else {
-                    if(strtoupper(trim($request->userlogin['role_id'])) != 'MD_H3_MGMT') {
-                        $available_part = 'Available';
-                    } else {
-                        $available_part = 'Available '.number_format($data->stock).' pcs';
-                    }
+                    $list_part_number .= ",'".strtoupper(trim($data->part_number))."'";
                 }
-
-                $notes_marketing = '';
-                $notes_diskon = '';
-                $notes_harga = '';
-                $notes_bo = '';
-
-                if(strtoupper(trim($request->userlogin['role_id'])) != 'D_H3') {
-                    if((double)$data->discount_produk > 0) {
-                        if((double)$data->discount > (double)$data->discount_produk) {
-                            $notes_diskon = '*) Disc Max Produk '.trim($data->item_group).' : '.number_format($data->discount_produk, 2).' %';
-                        } elseif((double)$data->disc_detail > (double)$data->discount_produk) {
-                            $notes_diskon = '*) Disc Max Produk '.trim($data->item_group).' : '.number_format($data->discount_produk, 2).' %';
-                        }
-                    }
-
-                    if((double)$data->harga_terendah > (double)$data->harga_netto_part) {
-                        $notes_harga = '*) Total harga parts lebih rendah dari harga yang telah ditentukan';
-                    } else {
-                        if((double)$data->harga_netto_terendah > 0) {
-                            if((double)$data->harga_netto_terendah > (double)$data->harga_netto_part) {
-                                $notes_harga = '*) Harga parts lebih rendah dari harga netto terendah';
-                            }
-                        }
-                    }
-
-                    if(strtoupper(trim($data->kode_file)) == 'A') {
-                        if((double)$data->discount > 0 && (double)$data->disc_detail > 0) {
-                            $notes_diskon = '*) Part number di diskon 2x';
-                        }
-                    }
-
-                    if((double)$data->jumlah_bo > 0) {
-                        $notes_bo = '*) Sudah ada di BO sejumlah '.number_format($data->jumlah_bo).' pcs';
-                    }
-                }
-
-
-                $data_detail_cart[] = [
-                    'ms_dealer_id'      => (int)$data->ms_dealer_id,
-                    'id'                => (int)$data->id_part,
-                    'id_part'           => (int)$data->id_part,
-                    'part_number'       => strtoupper(trim($data->part_number)),
-                    'part_description'  => strtoupper(trim($data->part_description)),
-                    'part_pictures'     => config('constants.app.app_images_url').'/'.strtoupper(trim($data->part_number)).'.jpg',
-                    'item_group'        => strtoupper(trim($data->item_group)),
-                    'sub_price'         => (double)$data->sub_price,
-                    'qty'               => (double)$data->qty,
-                    'discount_detail'   => (double)$data->disc_detail,
-                    'amount_total'      => (double)$data->amount_total,
-                    'total_part'        => (double)$data->stock,
-                    'het'               => (double)$data->het,
-                    'netto_part'        => (double)$data->harga_netto_part,
-                    'available_part'    => $available_part,
-                    'notes_marketing'   => $notes_marketing,
-                    'notes_disc'        => $notes_diskon,
-                    'notes_harga'       => $notes_harga,
-                    'notes_bo'          => $notes_bo,
-                ];
             }
 
-            $data_cart_part = [];
+            $data_detail_cart = [];
 
             if((double)$jumlah_data > 0) {
-                $data_cart_part = [
-                    'data' => [
-                        'id'                => $id,
-                        'no_order'          => $no_order,
-                        'dealer_code'       => $dealer_code,
-                        'dealer_name'       => $dealer_name,
-                        'tpc_code'          => (int)$tpc_code,
-                        'users_id'          => (int)$request->userlogin['id'],
-                        'total_price'       => $grand_total_price,
-                        'sub_price'         => $total_sub_price,
-                        'discount'          => $discount,
-                        'month_delivery'    => $month_delivery,
-                        'detail'            => $data_detail_cart
-                    ]
-                ];
-            } else {
-                $data_cart_part = [
-                    'data' => [
-                        'id'                => 0,
-                        'no_order'          => 0,
-                        'dealer_code'       => 0,
-                        'dealer_name'       => "",
-                        'tpc_code'          => 14,
-                        'users_id'          => (int)$request->userlogin['id'],
-                        'total_price'       => 0,
-                        'created_at'        => null,
-                        'updated_at'        => null,
-                        'status'            => 'DRAFT',
-                        'sub_price'         => 0,
-                        'discount'          => 0,
-                        'month_delivery'    => 0,
-                        'detail'            => []
-                    ]
-                ];
+                $sql = "select	'".trim($request->userlogin['id'])."' as id, isnull(carttmp.no_order, '') as no_order,
+                                isnull(company.kd_file, '') as kode_file, isnull(company.ppn, 0) as ppn,
+                                isnull(carttmp.total, 0) as total_price, isnull(carttmp.kd_tpc, '14') as tpc_code,
+                                isnull(carttmp.status, '') as status, isnull(carttmp.disc2, 0) as discount,
+                                isnull(carttmp.month_delivery, '') as month_delivery,
+                                isnull(msdealer.id, 0) as ms_dealer_id, isnull(carttmp.kd_dealer, '') as dealer_code,
+                                isnull(dealer.nm_dealer, '') as dealer_name, isnull(carttmp.kd_part, '') as part_number,
+                                isnull(carttmp.part_description, '') as part_description,
+                                isnull(carttmp.het, 0) as het, isnull(produk.nama, 0) as item_group,
+                                iif(isnull(carttmp.stock, 0) < 0, 0, isnull(carttmp.stock, 0)) as stock,
+                                isnull(carttmp.id_part, 0) as id_part, isnull(carttmp.jml_order, 0) as qty,
+                                isnull(carttmp.harga, 0) as sub_price, isnull(carttmp.disc1, 0) as disc_detail,
+                                isnull(carttmp.jumlah, 0) as amount_total, isnull(discp.discp, 0) as discount_produk,
+                                isnull(carttmp.hrg_netto, 0) as harga_netto,
+                                isnull(carttmp.hrg_pokok, 0) +
+                                    round(((isnull(carttmp.hrg_pokok, 0) * isnull(company.ppn, 0)) / 100), 0) as harga_terendah,
+                                isnull(carttmp.harga, 0) -
+                                    round(((isnull(carttmp.harga, 0) * isnull(carttmp.disc1, 0)) / 100), 0) -
+                                        round((((isnull(carttmp.harga, 0) -
+                                            round(((isnull(carttmp.harga, 0) * isnull(carttmp.disc1, 0)) / 100), 0)) *
+                                                isnull(carttmp.disc2, 0)) / 100), 0) as harga_netto_part,
+                                isnull(bo.jumlah, 0) as jumlah_bo, isnull(carttmp.usertime, '') usertime
+                        from
+                        (
+                            select	carttmp.companyid, carttmp.kd_key,
+                                    carttmp.no_order, carttmp.tgl_order, carttmp.kd_sales,
+                                    carttmp.kd_dealer, carttmp.kd_tpc, carttmp.status,
+                                    carttmp.created_at, carttmp.updated_at, carttmp.month_delivery,
+                                    carttmp.sub_total, carttmp.total, carttmp.disc2, company.kd_lokasi,
+                                    mspart.id as id_part, carttmp.kd_part, part.ket as part_description, part.kd_sub,
+                                    carttmp.jml_order, carttmp.harga, carttmp.disc1, carttmp.jumlah,
+                                    part.het, part.jml1dus, part.hrg_netto, part.hrg_pokok,
+                                    isnull(tbstlokasirak.stock, 0) -
+                                        (isnull(stlokasi.min, 0) + isnull(stlokasi.in_transit, 0) +
+                                            isnull(part.kanvas, 0) + isnull(part.min_gudang, 0) + isnull(part.in_transit, 0) +
+                                                isnull(part.konsinyasi, 0) + isnull(part.min_htl, 0)) as stock,
+                                    carttmp.usertime
+                            from
+                            (
+                                select  carttmp.companyid, carttmp.kd_key, carttmp.no_order,
+                                        carttmp.tgl_order, carttmp.kd_sales, carttmp.kd_dealer, carttmp.kd_tpc,
+                                        carttmp.created_at, carttmp.updated_at, carttmp.sub_total,
+                                        carttmp.disc2, carttmp.total, carttmp.status,
+                                        carttmp.month_delivery, cart_dtltmp.kd_part, cart_dtltmp.jml_order,
+                                        cart_dtltmp.harga, cart_dtltmp.disc1, cart_dtltmp.jumlah,
+                                        cart_dtltmp.usertime
+                                from
+                                (
+                                    select	carttmp.companyid, carttmp.kd_key, carttmp.no_order,
+                                            carttmp.tgl_order, carttmp.kd_sales, carttmp.kd_dealer, carttmp.kd_tpc,
+                                            carttmp.created_at, carttmp.updated_at, carttmp.sub_total,
+                                            carttmp.disc2, carttmp.total, carttmp.status,
+                                            carttmp.month_delivery
+                                    from	carttmp with (nolock)
+                                    where	carttmp.kd_key='".strtoupper(trim($request->userlogin['user_id']))."/".strtoupper(trim($kode_dealer))."' and
+                                            carttmp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
+                                )   carttmp
+                                        inner join cart_dtltmp with (nolock) on carttmp.kd_key=cart_dtltmp.kd_key and
+                                                    carttmp.companyid=cart_dtltmp.companyid
+                                where	cart_dtltmp.kd_part in (".$list_part_number.")
+                            )	carttmp
+                                    inner join company with (nolock) on carttmp.companyid=company.companyid
+                                    inner join mspart with (nolock) on carttmp.kd_part=mspart.kd_part
+                                    left join part with (nolock) on carttmp.kd_part=part.kd_part and
+                                                carttmp.companyid=part.companyid
+                                    left join stlokasi with (nolock) on carttmp.kd_part=stlokasi.kd_part and
+                                                company.kd_lokasi=stlokasi.kd_lokasi and
+                                                carttmp.companyid=stlokasi.companyid
+                                    left join tbstlokasirak with (nolock) on carttmp.kd_part=tbstlokasirak.kd_part and
+                                                company.kd_lokasi=tbstlokasirak.kd_lokasi and
+                                                company.kd_rak=tbstlokasirak.kd_rak and
+                                                carttmp.companyid=tbstlokasirak.companyid
+                        )	carttmp
+                                inner join company with (nolock) on carttmp.companyid=company.companyid
+                                left join msdealer with (nolock) on carttmp.kd_dealer=msdealer.kd_dealer and
+                                            carttmp.companyid=msdealer.companyid
+                                left join dealer with (nolock) on carttmp.kd_dealer=dealer.kd_dealer and
+                                            carttmp.companyid=dealer.companyid
+                                left join sub with (nolock) on carttmp.kd_sub=sub.kd_sub
+                                left join produk with (nolock) on sub.kd_produk=produk.kd_produk
+                                left join bo with (nolock) on carttmp.kd_part=bo.kd_part and
+                                            carttmp.companyid=bo.companyid and
+                                            '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer
+                                left join discp with (nolock) on produk.kd_produk=discp.kd_produk and
+                                            discp.cabang=iif(isnull(company.inisial, 0) = 1, 'RK', 'PC')
+                        order by carttmp.kd_part asc";
+
+                $result = DB::connection($request->get('divisi'))->select($sql);
+
+                foreach($result as $data) {
+                    $available_part = '';
+
+                    if((double)$data->stock <= 0) {
+                        $available_part = 'Not Available';
+                    } else {
+                        if(strtoupper(trim($request->userlogin['role_id'])) != 'MD_H3_MGMT') {
+                            $available_part = 'Available';
+                        } else {
+                            $available_part = 'Available '.number_format($data->stock).' pcs';
+                        }
+                    }
+
+                    $notes_marketing = '';
+                    $notes_diskon = '';
+                    $notes_harga = '';
+                    $notes_bo = '';
+
+                    if(strtoupper(trim($request->userlogin['role_id'])) != 'D_H3') {
+                        if((double)$data->discount_produk > 0) {
+                            if((double)$data->discount > (double)$data->discount_produk) {
+                                $notes_diskon = '*) Disc Max Produk '.trim($data->item_group).' : '.number_format($data->discount_produk, 2).' %';
+                            } elseif((double)$data->disc_detail > (double)$data->discount_produk) {
+                                $notes_diskon = '*) Disc Max Produk '.trim($data->item_group).' : '.number_format($data->discount_produk, 2).' %';
+                            }
+                        }
+
+                        if((double)$data->harga_terendah > (double)$data->harga_netto_part) {
+                            $notes_harga = '*) Total harga parts lebih rendah dari harga yang telah ditentukan';
+                        } else {
+                            if((double)$data->harga_netto > 0) {
+                                if((double)$data->harga_netto > (double)$data->harga_netto_part) {
+                                    $notes_harga = '*) Harga parts lebih rendah dari harga netto terendah';
+                                }
+                            }
+                        }
+
+                        if(strtoupper(trim($data->kode_file)) == 'A') {
+                            if((double)$data->discount > 0 && (double)$data->disc_detail > 0) {
+                                $notes_diskon = '*) Part number di diskon 2x';
+                            }
+                        }
+
+                        if((double)$data->jumlah_bo > 0) {
+                            $notes_bo = '*) Sudah ada di BO sejumlah '.number_format($data->jumlah_bo).' pcs';
+                        }
+                    }
+
+
+                    $data_detail_cart[] = [
+                        'ms_dealer_id'      => (int)$data->ms_dealer_id,
+                        'id'                => (int)$data->id_part,
+                        'id_part'           => (int)$data->id_part,
+                        'part_number'       => strtoupper(trim($data->part_number)),
+                        'part_description'  => strtoupper(trim($data->part_description)),
+                        'part_pictures'     => config('constants.app.app_images_url').'/'.strtoupper(trim($data->part_number)).'.jpg',
+                        'item_group'        => strtoupper(trim($data->item_group)),
+                        'sub_price'         => (double)$data->sub_price,
+                        'qty'               => (double)$data->qty,
+                        'discount_detail'   => (double)$data->disc_detail,
+                        'amount_total'      => (double)$data->amount_total,
+                        'total_part'        => (double)$data->stock,
+                        'het'               => (double)$data->het,
+                        'netto_part'        => (double)$data->harga_netto_part,
+                        'harga_netto'       => (double)$data->harga_netto,
+                        'harga_terendah'    => (double)$data->harga_terendah,
+                        'discount_produk'   => (double)$data->discount_produk,
+                        'available_part'    => $available_part,
+                        'notes_marketing'   => $notes_marketing,
+                        'notes_disc'        => $notes_diskon,
+                        'notes_harga'       => $notes_harga,
+                        'notes_bo'          => $notes_bo,
+                    ];
+                }
             }
 
-            return ApiResponse::responseSuccess('success', $data_cart_part);
+            $data = array_merge($data_cart_part, [
+                'total_next_page'   => (double)$total_next_page,
+                'detail'            => $data_detail_cart
+            ]);
+
+            $data_list_cart = [
+                'data' => $data
+            ];
+
+            return ApiResponse::responseSuccess('success', $data_list_cart);
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');

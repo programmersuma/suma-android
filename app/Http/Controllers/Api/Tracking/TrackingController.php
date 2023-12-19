@@ -111,7 +111,7 @@ class TrackingController extends Controller {
             $sql = $sql->groupByRaw("faktur.no_faktur, faktur.tgl_faktur")
                         ->orderByRaw("faktur.tgl_faktur desc,
                                     faktur.no_faktur desc")
-                        ->paginate(10);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -297,7 +297,7 @@ class TrackingController extends Controller {
                     ->where('fakt_dtl.kd_part', strtoupper(trim($part_number)))
                     ->where('faktur.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderBy('faktur.no_faktur','asc')
-                    ->paginate(10);
+                    ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];

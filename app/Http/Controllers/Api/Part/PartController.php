@@ -41,7 +41,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('typemotor.typemkt', 'asc')
-                    ->paginate(15);
+                    ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -112,7 +112,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('classprod.kd_class', 'asc')
-                        ->paginate(10);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -192,7 +192,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('produk.nourut', 'asc')
-                        ->paginate(10);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -267,7 +267,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('sub.kd_sub', 'asc')
-                        ->paginate(10);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -337,6 +337,25 @@ class PartController extends Controller {
             }
 
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
+            $kode_key = strtoupper(trim($request->userlogin['user_id'])).'/'.strtoupper(trim($kode_dealer));
+
+            $total_item_cart = 0;
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('cart_dtltmp')->lock('with (nolock)')
+                    ->selectRaw("isnull(cart_dtltmp.companyid, '') as companyid,
+                                isnull(cart_dtltmp.kd_key, '') as kode_key,
+                                count(cart_dtltmp.kd_key) as total_item")
+                    ->where('cart_dtltmp.kd_key', strtoupper(trim($kode_key)))
+                    ->where('cart_dtltmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->groupByRaw("cart_dtltmp.companyid, cart_dtltmp.kd_key")
+                    ->first();
+
+            if(!empty($sql->companyid)) {
+                $total_item_cart = (double)$sql->total_item;
+            } else {
+                $total_item_cart = 0;
+            }
 
             /* ========================================================================================== */
             /* Part Number Search */
@@ -394,15 +413,16 @@ class PartController extends Controller {
                 });
             }
 
-            $result = $sql->limit(10)->get();
+            $result = $sql->paginate(20);
 
             $list_search_part = '';
             $data_part = new Collection();
             $data_type_motor = [];
-            $collection_data_part = new Collection();
             $result_search_part = [];
 
-            foreach($result as $data) {
+            $data_list_part = $result->items();
+
+            foreach($data_list_part as $data) {
                 if(strtoupper(trim($list_search_part)) == '') {
                     $list_search_part = "'".strtoupper(trim($data->part_number))."'";
                 } else {
@@ -434,15 +454,9 @@ class PartController extends Controller {
                                 isnull(pho.kd_part, '') as part_pho, isnull(pdirect.kd_part, '') as part_pdirect,
                                 iif(isnull(part.stock, 0) - isnull(minshare.qtymkr, 0) - isnull(minshare.qtypc, 0) < 0, 0,
                                     isnull(part.stock, 0) - isnull(minshare.qtymkr, 0) - isnull(minshare.qtypc, 0)) as stock_total_part,
-                                isnull(part.jml1dus, 0) as dus, isnull(camp.no_camp, '') as no_camp, isnull(camp.nm_camp, '') as nama_camp,
-                                isnull(convert(varchar(10), camp.tgl_prd1, 107), '') as tanggal_awal_camp,
-                                isnull(convert(varchar(10), camp.tgl_prd2, 107), '') as tanggal_akhir_camp,
+                                isnull(part.jml1dus, 0) as dus,
                                 iif(isnull(part_fav.kd_part, '')='', 0, 1) as is_love,
-                                isnull(typemotor.typemkt, '') as typemkt, rtrim(typemotor.typemkt) + ' ' + rtrim(typemotor.ket) as type_motor,
-                                isnull(bo.jumlah, 0) as jumlah_bo, isnull(convert(varchar(50), cast(faktur.tgl_faktur as date), 106), '') as tgl_faktur,
-                                isnull(faktur.jml_jual, 0) as jumlah_faktur,
-                                isnull(convert(varchar(50), cast(pof.tgl_pof as date), 106), '') as tgl_pof,
-                                isnull(pof.jml_order, 0) as jumlah_pof
+                                isnull(typemotor.typemkt, '') as typemkt, rtrim(typemotor.typemkt) + ' ' + rtrim(typemotor.ket) as type_motor
                         from
                         (
                             select	part.companyid, mspart.id, part.kd_part, part.ket, produk.nama as produk,
@@ -482,95 +496,6 @@ class PartController extends Controller {
                                             part.companyid=pdirect.companyid
                                 left join part_fav with (nolock) on part.kd_part=part_fav.kd_part and
                                             part.companyid=part_fav.companyid and part_fav.user_id='".strtoupper(trim($request->userlogin['user_id']))."'
-                                left join bo with (nolock) on part.kd_part=bo.kd_part and
-                                            '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer and part.companyid=bo.companyid
-                                left join
-                                (
-                                    select	faktur.companyid, faktur.no, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
-                                    from
-                                    (
-                                        select	row_number() over(partition by faktur.kd_part
-                                                    order by faktur.kd_part asc, faktur.tgl_faktur desc) as no,
-                                                faktur.companyid, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
-                                        from
-                                        (
-                                            select	faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part,
-                                                    sum(isnull(fakt_dtl.jml_jual, 0)) as jml_jual
-                                            from
-                                            (
-                                                select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
-                                                from	faktur with (nolock)
-                                                where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
-                                                        faktur.kd_dealer='".strtoupper(trim($kode_dealer))."' and
-                                                        cast(faktur.tgl_faktur as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
-                                            )	faktur
-                                                    inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
-                                                                    faktur.companyid=fakt_dtl.companyid
-                                            where	isnull(fakt_dtl.jml_jual, 0) > 0 and
-                                                    fakt_dtl.kd_part in (".$list_search_part.")
-                                            group by faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part
-                                        )	faktur
-                                    )	faktur
-                                    where	isnull(faktur.no, 0) = 1
-                                )	faktur on part.kd_part=faktur.kd_part and
-                                                part.companyid=faktur.companyid
-                                left join
-                                (
-                                    select	pof.companyid, pof.no, pof.kd_part, pof.tgl_pof, pof.jml_order
-                                    from
-                                    (
-                                        select	row_number() over(partition by pof.kd_part
-                                                    order by pof.kd_part asc, pof.tgl_pof desc) as no,
-                                                pof.companyid, pof.kd_part, pof.tgl_pof, pof.jml_order
-                                        from
-                                        (
-                                            select	pof.companyid, pof.tgl_pof, pof_dtl.kd_part,
-                                                    sum(isnull(pof_dtl.jml_order, 0)) as jml_order
-                                            from
-                                            (
-                                                select	pof.companyid, pof.no_pof, pof.tgl_pof
-                                                from	pof with (nolock)
-                                                where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
-                                                        pof.kd_dealer='".strtoupper(trim($kode_dealer))."' and
-                                                        cast(pof.tgl_pof as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
-                                            )	pof
-                                                    inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
-                                                                    pof.companyid=pof_dtl.companyid
-                                            where	isnull(pof_dtl.jml_order, 0) > 0 and
-                                                    pof_dtl.kd_part in (".$list_search_part.")
-                                            group by pof.companyid, pof.tgl_pof, pof_dtl.kd_part
-                                        )	pof
-                                    )	pof
-                                    where	isnull(pof.no, 0) = 1
-                                )	pof on part.kd_part=pof.kd_part and
-                                            part.companyid=pof.companyid
-                                left join
-                                (
-                                    select	camp.companyid, camp.no_camp, camp.nm_camp,
-                                            camp.tgl_prd1, camp.tgl_prd2, camp.kd_part
-                                    from
-                                    (
-                                        select	row_number() over(order by
-                                                    camp.tgl_prd2 asc) as nomor,
-                                                camp.companyid, camp.no_camp, camp.nm_camp,
-                                                camp.tgl_prd1, camp.tgl_prd2,
-                                                camp_dtl.kd_part
-                                        from
-                                        (
-                                            select	camp.companyid, camp.no_camp, camp.nm_camp,
-                                                    camp.tgl_prd1, camp.tgl_prd2
-                                            from	camp with (nolock)
-                                            where	camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
-                                                    camp.tgl_prd2 <= convert(varchar(10), getdate(), 120) and
-                                                    camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
-                                        )	camp
-                                                inner join camp_dtl with (nolock) on camp.no_camp=camp_dtl.no_camp and
-                                                            camp.companyid=camp_dtl.companyid
-                                        where	camp_dtl.kd_part in (".$list_search_part.")
-                                    )	camp
-                                    where	camp.nomor = 1
-                                )   camp on part.kd_part=camp.kd_part and
-                                                part.companyid=camp.companyid
                                 left join
                                 (
                                     select	pvtm.kd_part, pvtm.typemkt, typemotor.ket
@@ -586,6 +511,8 @@ class PartController extends Controller {
 
                 $sql = DB::connection($request->get('divisi'))->select($sql);
 
+                $data_info_part = new Collection();
+                $data_transaksi_part = new Collection();
 
                 foreach($sql as $data) {
                     $stock_part = '';
@@ -614,7 +541,7 @@ class PartController extends Controller {
                         'type_motor'    => trim($data->type_motor)
                     ];
 
-                    $collection_data_part->push((object) [
+                    $data_info_part->push((object) [
                         'id'                => (int)$data->id,
                         'ms_dealer_id'      => (int)$request->get('ms_dealer_id'),
                         'dealer_code'       => strtoupper(trim($kode_dealer)),
@@ -635,19 +562,160 @@ class PartController extends Controller {
                         'total_part'        => (double)$data->stock_total_part,
                         'dus'               => (double)$data->dus,
                         'is_love'           => (int)$data->is_love,
+                        'available_part'    => $stock_part
+                    ]);
+                }
+
+                $sql = "select	isnull(part.companyid, '') as companyid, isnull(part.kd_part, '') as part_number,
+                                isnull(camp.no_camp, '') as no_camp, isnull(camp.nm_camp, '') as nama_camp,
+                                isnull(convert(varchar(10), camp.tgl_prd1, 107), '') as tanggal_awal_camp,
+                                isnull(convert(varchar(10), camp.tgl_prd2, 107), '') as tanggal_akhir_camp,
+                                isnull(convert(varchar(50), cast(faktur.tgl_faktur as date), 106), '') as tgl_faktur,
+                                isnull(faktur.jml_jual, 0) as jumlah_faktur,
+                                isnull(convert(varchar(50), cast(pof.tgl_pof as date), 106), '') as tgl_pof,
+                                isnull(pof.jml_order, 0) as jumlah_pof, isnull(bo.jumlah, 0) as jumlah_bo,
+		                        isnull(cart_dtltmp.kd_part, '') as part_cart
+                        from
+                        (
+                            select	part.companyid, part.kd_part
+                            from	part with (nolock)
+                            where	part.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                    part.kd_part in (".$list_search_part.")
+                        )	part
+                        left join bo with (nolock) on part.kd_part=bo.kd_part and
+                                    '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer and part.companyid=bo.companyid
+                        left join
+                        (
+                            select	faktur.companyid, faktur.no, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
+                            from
+                            (
+                                select	row_number() over(partition by faktur.kd_part order by faktur.kd_part asc, faktur.tgl_faktur desc) as no,
+                                        faktur.companyid, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
+                                from
+                                (
+                                    select	faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part,
+                                            sum(isnull(fakt_dtl.jml_jual, 0)) as jml_jual
+                                    from
+                                    (
+                                        select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
+                                        from	faktur with (nolock)
+                                        where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                                faktur.kd_dealer='".strtoupper(trim($kode_dealer))."' and
+                                                cast(faktur.tgl_faktur as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
+                                    )	faktur
+                                            inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
+                                                            faktur.companyid=fakt_dtl.companyid
+                                    where	isnull(fakt_dtl.jml_jual, 0) > 0 and
+                                            fakt_dtl.kd_part in (".$list_search_part.")
+                                    group by faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part
+                                )	faktur
+                            )	faktur
+                            where	isnull(faktur.no, 0) = 1
+                        )	faktur on part.kd_part=faktur.kd_part and part.companyid=faktur.companyid
+                        left join
+                        (
+                            select	pof.companyid, pof.no, pof.kd_part, pof.tgl_pof, pof.jml_order
+                            from
+                            (
+                                select	row_number() over(partition by pof.kd_part order by pof.kd_part asc, pof.tgl_pof desc) as no,
+                                        pof.companyid, pof.kd_part, pof.tgl_pof, pof.jml_order
+                                from
+                                (
+                                    select	pof.companyid, pof.tgl_pof, pof_dtl.kd_part,
+                                            sum(isnull(pof_dtl.jml_order, 0)) as jml_order
+                                    from
+                                    (
+                                        select	pof.companyid, pof.no_pof, pof.tgl_pof
+                                        from	pof with (nolock)
+                                        where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                                pof.kd_dealer='".strtoupper(trim($kode_dealer))."' and
+                                                cast(pof.tgl_pof as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
+                                    )	pof
+                                            inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
+                                                            pof.companyid=pof_dtl.companyid
+                                    where	isnull(pof_dtl.jml_order, 0) > 0 and
+                                            pof_dtl.kd_part in (".$list_search_part.")
+                                    group by pof.companyid, pof.tgl_pof, pof_dtl.kd_part
+                                )	pof
+                            )	pof
+                            where	isnull(pof.no, 0) = 1
+                        )	pof on part.kd_part=pof.kd_part and part.companyid=pof.companyid
+                        left join
+                        (
+                            select	camp.companyid, camp.no_camp, camp.nm_camp,
+                                    camp.tgl_prd1, camp.tgl_prd2, camp.kd_part
+                            from
+                            (
+                                select	row_number() over(order by camp.tgl_prd2 asc) as nomor,
+                                        camp.companyid, camp.no_camp, camp.nm_camp,
+                                        camp.tgl_prd1, camp.tgl_prd2,
+                                        camp_dtl.kd_part
+                                from
+                                (
+                                    select	camp.companyid, camp.no_camp, camp.nm_camp,
+                                            camp.tgl_prd1, camp.tgl_prd2
+                                    from	camp with (nolock)
+                                    where	camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
+                                            camp.tgl_prd2 <= convert(varchar(10), getdate(), 120) and
+                                            camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
+                                )	camp
+                                        inner join camp_dtl with (nolock) on camp.no_camp=camp_dtl.no_camp and
+                                                    camp.companyid=camp_dtl.companyid
+                                where	camp_dtl.kd_part in (".$list_search_part.")
+                            )	camp
+                            where	camp.nomor = 1
+                        )   camp on part.kd_part=camp.kd_part and part.companyid=camp.companyid
+                        left join
+                        (
+                            select	cart_dtltmp.companyid, cart_dtltmp.kd_part
+                            from	cart_dtltmp with (nolock)
+                            where	cart_dtltmp.kd_key='".strtoupper(trim($kode_key))."' and
+                                    cart_dtltmp.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                    cart_dtltmp.kd_part in (".$list_search_part.")
+                        )	cart_dtltmp on part.kd_part=cart_dtltmp.kd_part and part.companyid=cart_dtltmp.companyid
+                        order by part.kd_part asc";
+
+                $sql = DB::connection($request->get('divisi'))->select($sql);
+
+                foreach($sql as $data) {
+                    $data_transaksi_part->push((object) [
+                        'part_number'       => strtoupper(trim($data->part_number)),
+                        'is_cart'           => (trim($data->part_cart) == '') ? false : true,
                         'is_campaign'       => (strtoupper(trim($data->no_camp)) == '') ? 0 : 1,
                         'nama_campaign'     => strtoupper(trim($data->nama_camp)),
                         'periode_campaign'  => strtoupper(trim($data->tanggal_awal_camp)).' s/d '.strtoupper(trim($data->tanggal_akhir_camp)),
-                        'available_part'    => $stock_part,
-                        'keterangan_bo'     => ((double)$data->jumlah_bo > 0) ? 'Part number ini sudah ada di BO sejumlah : '.$data->jumlah_bo.' pcs' : '',
-                        'keterangan_faktur' => ((double)$data->jumlah_faktur > 0) ? 'Faktur terakhir tanggal : '.$data->tgl_faktur.', sejumlah : '.number_format($data->jumlah_faktur) : '',
-                        'keterangan_pof'    => ((double)$data->jumlah_pof > 0) ? 'POF terakhir tanggal : '.$data->tgl_pof.', sejumlah : '.number_format($data->jumlah_pof) : '',
+                        'keterangan_bo'     => ((double)$data->jumlah_bo > 0) ? '*) Part number ini sudah ada di BO sejumlah : '.$data->jumlah_bo.' pcs' : '',
+                        'keterangan_faktur' => ((double)$data->jumlah_faktur > 0) ? '*) Faktur terakhir tanggal : '.$data->tgl_faktur.', sejumlah : '.number_format($data->jumlah_faktur) : '',
+                        'keterangan_pof'    => ((double)$data->jumlah_pof > 0) ? '*) POF terakhir tanggal : '.$data->tgl_pof.', sejumlah : '.number_format($data->jumlah_pof) : '',
                     ]);
                 }
 
                 $part_number = '';
-                foreach($collection_data_part as $collection) {
+                foreach($data_info_part as $collection) {
                     if ($part_number != $collection->part_number) {
+                        $is_cart = false;
+                        $is_campaign = 0;
+                        $nama_campaign = '';
+                        $periode_campaign = '';
+                        $keterangan_bo = '';
+                        $keterangan_faktur = '';
+                        $keterangan_pof = '';
+
+                        $data_transaksi = $data_transaksi_part
+                                            ->where('part_number', strtoupper(trim($collection->part_number)))
+                                            ->values()
+                                            ->all();
+
+                        foreach($data_transaksi as $data) {
+                            $is_cart = $data->is_cart;
+                            $is_campaign = $data->is_campaign;
+                            $nama_campaign = $data->nama_campaign;
+                            $periode_campaign = $data->periode_campaign;
+                            $keterangan_bo = $data->keterangan_bo;
+                            $keterangan_faktur = $data->keterangan_faktur;
+                            $keterangan_pof = $data->keterangan_pof;
+                        }
+
                         $data_part->push((object) [
                             'id'                => (int)$collection->id,
                             'ms_dealer_id'      => (int)$collection->ms_dealer_id,
@@ -673,13 +741,14 @@ class PartController extends Controller {
                             'total_part'        => (double)$collection->total_part,
                             'dus'               => (double)$collection->dus,
                             'is_love'           => (int)$collection->is_love,
-                            'is_campaign'       => (int)$collection->is_campaign,
-                            'nama_campaign'     => strtoupper(trim($collection->nama_campaign)),
-                            'periode_campaign'  => strtoupper(trim($collection->periode_campaign)),
                             'available_part'    => trim($collection->available_part),
-                            'keterangan_bo'     => trim($collection->keterangan_bo),
-                            'keterangan_faktur' => trim($collection->keterangan_faktur),
-                            'keterangan_pof'    => trim($collection->keterangan_pof),
+                            'is_cart'           => $is_cart,
+                            'is_campaign'       => $is_campaign,
+                            'nama_campaign'     => $nama_campaign,
+                            'periode_campaign'  => $periode_campaign,
+                            'keterangan_bo'     => $keterangan_bo,
+                            'keterangan_faktur' => $keterangan_faktur,
+                            'keterangan_pof'    => $keterangan_pof,
                         ]);
 
                         $part_number = $collection->part_number;
@@ -716,7 +785,12 @@ class PartController extends Controller {
                 $result_search_part = $result_search_part->values()->all();
             }
 
-            return ApiResponse::responseSuccess('success', [ 'data' => $result_search_part ]);
+            $result = [
+                'total_item_cart'   => (double)$total_item_cart,
+                'data'              => $result_search_part
+            ];
+
+            return ApiResponse::responseSuccess('success', $result);
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
@@ -745,37 +819,49 @@ class PartController extends Controller {
             }
 
             $kode_dealer = strtoupper(trim($sql->kode_dealer));
+            $kode_key = strtoupper(trim($request->userlogin['user_id'])).'/'.strtoupper(trim($kode_dealer));
 
-            /* ========================================================================================== */
-            /* Part Number Favorite */
-            /* ========================================================================================== */
+            $total_item_cart = 0;
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('cart_dtltmp')->lock('with (nolock)')
+                    ->selectRaw("isnull(cart_dtltmp.companyid, '') as companyid,
+                                isnull(cart_dtltmp.kd_key, '') as kode_key,
+                                count(cart_dtltmp.kd_key) as total_item")
+                    ->where('cart_dtltmp.kd_key', strtoupper(trim($kode_key)))
+                    ->where('cart_dtltmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->groupByRaw("cart_dtltmp.companyid, cart_dtltmp.kd_key")
+                    ->first();
+
+            if(!empty($sql->companyid)) {
+                $total_item_cart = (double)$sql->total_item;
+            } else {
+                $total_item_cart = 0;
+            }
+
+            $sql = DB::connection($request->get('divisi'))
+                    ->table('part_fav')->lock('with (nolock)')
+                    ->selectRaw("isnull(part_fav.kd_part, '') as part_number")
+                    ->leftJoin(DB::raw('part with (nolock)'), function($join) {
+                        $join->on('part.kd_part', '=', 'part_fav.kd_part')
+                            ->on('part.companyid', '=', 'part_fav.companyid');
+                    })
+                    ->where('part_fav.user_id', strtoupper(trim($request->userlogin['user_id'])))
+                    ->where('part_fav.kd_dealer', strtoupper(trim($kode_dealer)))
+                    ->where('part_fav.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->whereRaw("isnull(part.del_send, 0)=0")
+                    ->orderBy('part_fav.kd_part', 'asc')
+                    ->paginate(20);
+
+
             $list_search_part = '';
-
-            $sql = "select	isnull(part_fav.kd_part, '') as part_number
-                    from
-                    (
-                        select	part_fav.companyid, part_fav.kd_part
-                        from	part_fav with (nolock)
-                        where	part_fav.user_id=? and
-                                part_fav.kd_dealer=? and
-                                part_fav.companyid=?
-                    )	part_fav
-                            inner join part with (nolock) on part_fav.kd_part=part.kd_part and
-                                        part_fav.companyid=part.companyid
-                    where	isnull(part.del_send, 0)=0
-                    order by part_fav.kd_part asc";
-
-            $result = DB::connection($request->get('divisi'))->select($sql, [
-                strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($kode_dealer)),
-                strtoupper(trim($request->userlogin['companyid']))
-            ]);
-
-            $list_search_part = '';
+            $data_part = new Collection();
             $data_type_motor = [];
-            $collection_data_part = new Collection();
-            $result_part_favorite = [];
+            $result_search_part = [];
 
-            foreach($result as $data) {
+            $data_list_part = $sql->items();
+
+            foreach($data_list_part as $data) {
                 if(strtoupper(trim($list_search_part)) == '') {
                     $list_search_part = "'".strtoupper(trim($data->part_number))."'";
                 } else {
@@ -784,7 +870,7 @@ class PartController extends Controller {
             }
 
             /* ========================================================================================== */
-            /* Result Detail Part Number Favorite */
+            /* Result Detail Part Number Search */
             /* ========================================================================================== */
             if(trim($list_search_part) != '') {
                 $sql = "select	isnull(part.id, 0) as id, isnull(rtrim(part.kd_part), '') as part_number,
@@ -807,15 +893,9 @@ class PartController extends Controller {
                                 isnull(pho.kd_part, '') as part_pho, isnull(pdirect.kd_part, '') as part_pdirect,
                                 iif(isnull(part.stock, 0) - isnull(minshare.qtymkr, 0) - isnull(minshare.qtypc, 0) < 0, 0,
                                     isnull(part.stock, 0) - isnull(minshare.qtymkr, 0) - isnull(minshare.qtypc, 0)) as stock_total_part,
-                                isnull(part.jml1dus, 0) as dus, isnull(camp.no_camp, '') as no_camp, isnull(camp.nm_camp, '') as nama_camp,
-                                isnull(convert(varchar(10), camp.tgl_prd1, 107), '') as tanggal_awal_camp,
-                                isnull(convert(varchar(10), camp.tgl_prd2, 107), '') as tanggal_akhir_camp,
+                                isnull(part.jml1dus, 0) as dus,
                                 iif(isnull(part_fav.kd_part, '')='', 0, 1) as is_love,
-                                isnull(typemotor.typemkt, '') as typemkt, rtrim(typemotor.typemkt) + ' ' + rtrim(typemotor.ket) as type_motor,
-                                isnull(bo.jumlah, 0) as jumlah_bo, isnull(convert(varchar(50), cast(faktur.tgl_faktur as date), 106), '') as tgl_faktur,
-                                isnull(faktur.jml_jual, 0) as jumlah_faktur,
-                                isnull(convert(varchar(50), cast(pof.tgl_pof as date), 106), '') as tgl_pof,
-                                isnull(pof.jml_order, 0) as jumlah_pof
+                                isnull(typemotor.typemkt, '') as typemkt, rtrim(typemotor.typemkt) + ' ' + rtrim(typemotor.ket) as type_motor
                         from
                         (
                             select	part.companyid, mspart.id, part.kd_part, part.ket, produk.nama as produk,
@@ -855,95 +935,6 @@ class PartController extends Controller {
                                             part.companyid=pdirect.companyid
                                 left join part_fav with (nolock) on part.kd_part=part_fav.kd_part and
                                             part.companyid=part_fav.companyid and part_fav.user_id='".strtoupper(trim($request->userlogin['user_id']))."'
-                                left join bo with (nolock) on part.kd_part=bo.kd_part and
-                                            '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer and part.companyid=bo.companyid
-                                left join
-                                (
-                                    select	faktur.companyid, faktur.no, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
-                                    from
-                                    (
-                                        select	row_number() over(partition by faktur.kd_part
-                                                    order by faktur.kd_part asc, faktur.tgl_faktur desc) as no,
-                                                faktur.companyid, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
-                                        from
-                                        (
-                                            select	faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part,
-                                                    sum(isnull(fakt_dtl.jml_jual, 0)) as jml_jual
-                                            from
-                                            (
-                                                select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
-                                                from	faktur with (nolock)
-                                                where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
-                                                        faktur.kd_dealer='".strtoupper(trim($kode_dealer))."' and
-                                                        cast(faktur.tgl_faktur as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
-                                            )	faktur
-                                                    inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
-                                                                    faktur.companyid=fakt_dtl.companyid
-                                            where	isnull(fakt_dtl.jml_jual, 0) > 0 and
-                                                    fakt_dtl.kd_part in (".$list_search_part.")
-                                            group by faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part
-                                        )	faktur
-                                    )	faktur
-                                    where	isnull(faktur.no, 0) = 1
-                                )	faktur on part.kd_part=faktur.kd_part and
-                                                part.companyid=faktur.companyid
-                                left join
-                                (
-                                    select	pof.companyid, pof.no, pof.kd_part, pof.tgl_pof, pof.jml_order
-                                    from
-                                    (
-                                        select	row_number() over(partition by pof.kd_part
-                                                    order by pof.kd_part asc, pof.tgl_pof desc) as no,
-                                                pof.companyid, pof.kd_part, pof.tgl_pof, pof.jml_order
-                                        from
-                                        (
-                                            select	pof.companyid, pof.tgl_pof, pof_dtl.kd_part,
-                                                    sum(isnull(pof_dtl.jml_order, 0)) as jml_order
-                                            from
-                                            (
-                                                select	pof.companyid, pof.no_pof, pof.tgl_pof
-                                                from	pof with (nolock)
-                                                where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
-                                                        pof.kd_dealer='".strtoupper(trim($kode_dealer))."' and
-                                                        cast(pof.tgl_pof as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
-                                            )	pof
-                                                    inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
-                                                                    pof.companyid=pof_dtl.companyid
-                                            where	isnull(pof_dtl.jml_order, 0) > 0 and
-                                                    pof_dtl.kd_part in (".$list_search_part.")
-                                            group by pof.companyid, pof.tgl_pof, pof_dtl.kd_part
-                                        )	pof
-                                    )	pof
-                                    where	isnull(pof.no, 0) = 1
-                                )	pof on part.kd_part=pof.kd_part and
-                                            part.companyid=pof.companyid
-                                left join
-                                (
-                                    select	camp.companyid, camp.no_camp, camp.nm_camp,
-                                            camp.tgl_prd1, camp.tgl_prd2, camp.kd_part
-                                    from
-                                    (
-                                        select	row_number() over(order by
-                                                    camp.tgl_prd2 asc) as nomor,
-                                                camp.companyid, camp.no_camp, camp.nm_camp,
-                                                camp.tgl_prd1, camp.tgl_prd2,
-                                                camp_dtl.kd_part
-                                        from
-                                        (
-                                            select	camp.companyid, camp.no_camp, camp.nm_camp,
-                                                    camp.tgl_prd1, camp.tgl_prd2
-                                            from	camp with (nolock)
-                                            where	camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
-                                                    camp.tgl_prd2 <= convert(varchar(10), getdate(), 120) and
-                                                    camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
-                                        )	camp
-                                                inner join camp_dtl with (nolock) on camp.no_camp=camp_dtl.no_camp and
-                                                            camp.companyid=camp_dtl.companyid
-                                        where	camp_dtl.kd_part in (".$list_search_part.")
-                                    )	camp
-                                    where	camp.nomor = 1
-                                )   camp on part.kd_part=camp.kd_part and
-                                                part.companyid=camp.companyid
                                 left join
                                 (
                                     select	pvtm.kd_part, pvtm.typemkt, typemotor.ket
@@ -959,6 +950,8 @@ class PartController extends Controller {
 
                 $sql = DB::connection($request->get('divisi'))->select($sql);
 
+                $data_info_part = new Collection();
+                $data_transaksi_part = new Collection();
 
                 foreach($sql as $data) {
                     $stock_part = '';
@@ -987,7 +980,7 @@ class PartController extends Controller {
                         'type_motor'    => trim($data->type_motor)
                     ];
 
-                    $collection_data_part->push((object) [
+                    $data_info_part->push((object) [
                         'id'                => (int)$data->id,
                         'ms_dealer_id'      => (int)$request->get('ms_dealer_id'),
                         'dealer_code'       => strtoupper(trim($kode_dealer)),
@@ -1008,20 +1001,161 @@ class PartController extends Controller {
                         'total_part'        => (double)$data->stock_total_part,
                         'dus'               => (double)$data->dus,
                         'is_love'           => (int)$data->is_love,
+                        'available_part'    => $stock_part
+                    ]);
+                }
+
+                $sql = "select	isnull(part.companyid, '') as companyid, isnull(part.kd_part, '') as part_number,
+                                isnull(camp.no_camp, '') as no_camp, isnull(camp.nm_camp, '') as nama_camp,
+                                isnull(convert(varchar(10), camp.tgl_prd1, 107), '') as tanggal_awal_camp,
+                                isnull(convert(varchar(10), camp.tgl_prd2, 107), '') as tanggal_akhir_camp,
+                                isnull(convert(varchar(50), cast(faktur.tgl_faktur as date), 106), '') as tgl_faktur,
+                                isnull(faktur.jml_jual, 0) as jumlah_faktur,
+                                isnull(convert(varchar(50), cast(pof.tgl_pof as date), 106), '') as tgl_pof,
+                                isnull(pof.jml_order, 0) as jumlah_pof, isnull(bo.jumlah, 0) as jumlah_bo,
+		                        isnull(cart_dtltmp.kd_part, '') as part_cart
+                        from
+                        (
+                            select	part.companyid, part.kd_part
+                            from	part with (nolock)
+                            where	part.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                    part.kd_part in (".$list_search_part.")
+                        )	part
+                        left join bo with (nolock) on part.kd_part=bo.kd_part and
+                                    '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer and part.companyid=bo.companyid
+                        left join
+                        (
+                            select	faktur.companyid, faktur.no, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
+                            from
+                            (
+                                select	row_number() over(partition by faktur.kd_part order by faktur.kd_part asc, faktur.tgl_faktur desc) as no,
+                                        faktur.companyid, faktur.kd_part, faktur.tgl_faktur, faktur.jml_jual
+                                from
+                                (
+                                    select	faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part,
+                                            sum(isnull(fakt_dtl.jml_jual, 0)) as jml_jual
+                                    from
+                                    (
+                                        select	faktur.companyid, faktur.no_faktur, faktur.tgl_faktur
+                                        from	faktur with (nolock)
+                                        where	faktur.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                                faktur.kd_dealer='".strtoupper(trim($kode_dealer))."' and
+                                                cast(faktur.tgl_faktur as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
+                                    )	faktur
+                                            inner join fakt_dtl with (nolock) on faktur.no_faktur=fakt_dtl.no_faktur and
+                                                            faktur.companyid=fakt_dtl.companyid
+                                    where	isnull(fakt_dtl.jml_jual, 0) > 0 and
+                                            fakt_dtl.kd_part in (".$list_search_part.")
+                                    group by faktur.companyid, faktur.tgl_faktur, fakt_dtl.kd_part
+                                )	faktur
+                            )	faktur
+                            where	isnull(faktur.no, 0) = 1
+                        )	faktur on part.kd_part=faktur.kd_part and part.companyid=faktur.companyid
+                        left join
+                        (
+                            select	pof.companyid, pof.no, pof.kd_part, pof.tgl_pof, pof.jml_order
+                            from
+                            (
+                                select	row_number() over(partition by pof.kd_part order by pof.kd_part asc, pof.tgl_pof desc) as no,
+                                        pof.companyid, pof.kd_part, pof.tgl_pof, pof.jml_order
+                                from
+                                (
+                                    select	pof.companyid, pof.tgl_pof, pof_dtl.kd_part,
+                                            sum(isnull(pof_dtl.jml_order, 0)) as jml_order
+                                    from
+                                    (
+                                        select	pof.companyid, pof.no_pof, pof.tgl_pof
+                                        from	pof with (nolock)
+                                        where	pof.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                                pof.kd_dealer='".strtoupper(trim($kode_dealer))."' and
+                                                cast(pof.tgl_pof as date) >= dateadd(month, -3, convert(varchar(10), getdate(), 120))
+                                    )	pof
+                                            inner join pof_dtl with (nolock) on pof.no_pof=pof_dtl.no_pof and
+                                                            pof.companyid=pof_dtl.companyid
+                                    where	isnull(pof_dtl.jml_order, 0) > 0 and
+                                            pof_dtl.kd_part in (".$list_search_part.")
+                                    group by pof.companyid, pof.tgl_pof, pof_dtl.kd_part
+                                )	pof
+                            )	pof
+                            where	isnull(pof.no, 0) = 1
+                        )	pof on part.kd_part=pof.kd_part and part.companyid=pof.companyid
+                        left join
+                        (
+                            select	camp.companyid, camp.no_camp, camp.nm_camp,
+                                    camp.tgl_prd1, camp.tgl_prd2, camp.kd_part
+                            from
+                            (
+                                select	row_number() over(order by camp.tgl_prd2 asc) as nomor,
+                                        camp.companyid, camp.no_camp, camp.nm_camp,
+                                        camp.tgl_prd1, camp.tgl_prd2,
+                                        camp_dtl.kd_part
+                                from
+                                (
+                                    select	camp.companyid, camp.no_camp, camp.nm_camp,
+                                            camp.tgl_prd1, camp.tgl_prd2
+                                    from	camp with (nolock)
+                                    where	camp.tgl_prd1 >= convert(varchar(10), getdate(), 120) and
+                                            camp.tgl_prd2 <= convert(varchar(10), getdate(), 120) and
+                                            camp.companyid='".strtoupper(trim($request->userlogin['companyid']))."'
+                                )	camp
+                                        inner join camp_dtl with (nolock) on camp.no_camp=camp_dtl.no_camp and
+                                                    camp.companyid=camp_dtl.companyid
+                                where	camp_dtl.kd_part in (".$list_search_part.")
+                            )	camp
+                            where	camp.nomor = 1
+                        )   camp on part.kd_part=camp.kd_part and part.companyid=camp.companyid
+                        left join
+                        (
+                            select	cart_dtltmp.companyid, cart_dtltmp.kd_part
+                            from	cart_dtltmp with (nolock)
+                            where	cart_dtltmp.kd_key='".strtoupper(trim($kode_key))."' and
+                                    cart_dtltmp.companyid='".strtoupper(trim($request->userlogin['companyid']))."' and
+                                    cart_dtltmp.kd_part in (".$list_search_part.")
+                        )	cart_dtltmp on part.kd_part=cart_dtltmp.kd_part and part.companyid=cart_dtltmp.companyid
+                        order by part.kd_part asc";
+
+                $sql = DB::connection($request->get('divisi'))->select($sql);
+
+                foreach($sql as $data) {
+                    $data_transaksi_part->push((object) [
+                        'part_number'       => strtoupper(trim($data->part_number)),
+                        'is_cart'           => (trim($data->part_cart) == '') ? false : true,
                         'is_campaign'       => (strtoupper(trim($data->no_camp)) == '') ? 0 : 1,
                         'nama_campaign'     => strtoupper(trim($data->nama_camp)),
                         'periode_campaign'  => strtoupper(trim($data->tanggal_awal_camp)).' s/d '.strtoupper(trim($data->tanggal_akhir_camp)),
-                        'available_part'    => $stock_part,
-                        'keterangan_bo'     => ((double)$data->jumlah_bo > 0) ? 'Part number ini sudah ada di BO sejumlah : '.$data->jumlah_bo.' pcs' : '',
-                        'keterangan_faktur' => ((double)$data->jumlah_faktur > 0) ? 'Faktur terakhir tanggal : '.$data->tgl_faktur.', sejumlah : '.number_format($data->jumlah_faktur) : '',
-                        'keterangan_pof'    => ((double)$data->jumlah_pof > 0) ? 'POF terakhir tanggal : '.$data->tgl_pof.', sejumlah : '.number_format($data->jumlah_pof) : '',
+                        'keterangan_bo'     => ((double)$data->jumlah_bo > 0) ? '*) Part number ini sudah ada di BO sejumlah : '.$data->jumlah_bo.' pcs' : '',
+                        'keterangan_faktur' => ((double)$data->jumlah_faktur > 0) ? '*) Faktur terakhir tanggal : '.$data->tgl_faktur.', sejumlah : '.number_format($data->jumlah_faktur) : '',
+                        'keterangan_pof'    => ((double)$data->jumlah_pof > 0) ? '*) POF terakhir tanggal : '.$data->tgl_pof.', sejumlah : '.number_format($data->jumlah_pof) : '',
                     ]);
                 }
 
                 $part_number = '';
-                foreach($collection_data_part as $collection) {
+                foreach($data_info_part as $collection) {
                     if ($part_number != $collection->part_number) {
-                        $data_part[] = [
+                        $is_cart = false;
+                        $is_campaign = 0;
+                        $nama_campaign = '';
+                        $periode_campaign = '';
+                        $keterangan_bo = '';
+                        $keterangan_faktur = '';
+                        $keterangan_pof = '';
+
+                        $data_transaksi = $data_transaksi_part
+                                            ->where('part_number', strtoupper(trim($collection->part_number)))
+                                            ->values()
+                                            ->all();
+
+                        foreach($data_transaksi as $data) {
+                            $is_cart = $data->is_cart;
+                            $is_campaign = $data->is_campaign;
+                            $nama_campaign = $data->nama_campaign;
+                            $periode_campaign = $data->periode_campaign;
+                            $keterangan_bo = $data->keterangan_bo;
+                            $keterangan_faktur = $data->keterangan_faktur;
+                            $keterangan_pof = $data->keterangan_pof;
+                        }
+
+                        $data_part->push((object) [
                             'id'                => (int)$collection->id,
                             'ms_dealer_id'      => (int)$collection->ms_dealer_id,
                             'dealer_code'       => strtoupper(trim($collection->dealer_code)),
@@ -1046,54 +1180,29 @@ class PartController extends Controller {
                             'total_part'        => (double)$collection->total_part,
                             'dus'               => (double)$collection->dus,
                             'is_love'           => (int)$collection->is_love,
-                            'is_campaign'       => (int)$collection->is_campaign,
-                            'nama_campaign'     => strtoupper(trim($collection->nama_campaign)),
-                            'periode_campaign'  => strtoupper(trim($collection->periode_campaign)),
                             'available_part'    => trim($collection->available_part),
-                            'keterangan_bo'     => trim($collection->keterangan_bo),
-                            'keterangan_faktur' => trim($collection->keterangan_faktur),
-                            'keterangan_pof'    => trim($collection->keterangan_pof),
-                        ];
+                            'is_cart'           => $is_cart,
+                            'is_campaign'       => $is_campaign,
+                            'nama_campaign'     => $nama_campaign,
+                            'periode_campaign'  => $periode_campaign,
+                            'keterangan_bo'     => $keterangan_bo,
+                            'keterangan_faktur' => $keterangan_faktur,
+                            'keterangan_pof'    => $keterangan_pof,
+                        ]);
+
                         $part_number = $collection->part_number;
                     }
                 }
 
-                if(!empty($request->get('sorting'))) {
-                    if($request->get('sorting') == 'part_number|asc') {
-                        $result_search_part = collect($data_part)->sortBy('part_number');
-                    } elseif ($request->get('sorting') == 'part_number|desc') {
-                        $result_search_part = collect($data_part)->sortByDesc('part_number');
-                    }
-
-                    if ($request->get('sorting') == 'description|asc') {
-                        $result_search_part = collect($data_part)->sortBy('part_description');
-                    } elseif ($request->get('sorting') == 'description|desc') {
-                        $result_search_part = collect($data_part)->sortByDesc('part_description');
-                    }
-
-                    if ($request->get('sorting') == 'available_part|a') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortBy('available_part');
-                    } elseif ($request->get('sorting') == 'available_part|na') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortByDesc('available_part');
-                    }
-
-                    if ($request->get('sorting') == 'promo|yes') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortByDesc('is_campaign');
-                    } elseif ($request->get('sorting') == 'promo|no') {
-                        $result_search_part = collect($data_part)->sortBy('part_number')->sortBy('is_campaign');
-                    }
-                } else {
-                    $result_search_part = collect($data_part)->sortBy('part_number');
-                }
-
-                $result_search_part->values()->all();
-
-                $result_part_favorite = [
-                    'data'  => $result_search_part
-                ];
+                $result_search_part = $data_part->sortBy('part_number');
             }
 
-            return ApiResponse::responseSuccess('success', $result_part_favorite);
+            $result = [
+                'total_item_cart'   => (double)$total_item_cart,
+                'data' => $result_search_part
+            ];
+
+            return ApiResponse::responseSuccess('success', $result);
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
@@ -1218,7 +1327,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderByRaw('bo.kd_sales asc, bo.kd_dealer asc, bo.kd_part asc')
-                        ->paginate(10);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -1490,7 +1599,7 @@ class PartController extends Controller {
                                 isnull(pricelist.ukuran_file, '') as ukuran_file")
                     ->orderBy('pricelist.tanggal', 'desc')
                     ->orderBy('pricelist.nama_file', 'desc')
-                    ->paginate(15);
+                    ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];

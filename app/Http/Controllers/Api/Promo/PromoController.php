@@ -37,7 +37,7 @@ class PromoController extends Controller
                     ->whereRaw("camp.tgl_prd1 <= convert(varchar(10), getdate(), 120) and
                                 camp.tgl_prd2 >= convert(varchar(10), getdate(), 120)")
                     ->orderByRaw("camp.tgl_prd2 asc")
-                    ->paginate(10);
+                    ->paginate(20);
 
             $data_campaign = [];
             $result = collect($sql)->toArray();
@@ -91,7 +91,7 @@ class PromoController extends Controller
                     ->where('camp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->groupByRaw("camp_dtl.kd_part")
                     ->orderByRaw("camp_dtl.kd_part asc")
-                    ->paginate(10);
+                    ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -220,7 +220,7 @@ class PromoController extends Controller
                     ->where('camp.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->groupByRaw("camp_dtl.kd_part")
                     ->orderByRaw("camp_dtl.kd_part asc")
-                    ->paginate(10);
+                    ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];

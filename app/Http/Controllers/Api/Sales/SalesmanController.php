@@ -64,7 +64,7 @@ class SalesmanController extends Controller
             }
 
             $sql = $sql->orderBy('salesman.kd_sales', 'asc')
-                        ->paginate(15);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -148,7 +148,7 @@ class SalesmanController extends Controller
             }
 
             $sql = $sql->orderBy('salesman.kd_sales', 'asc')
-                        ->paginate(15);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -207,7 +207,7 @@ class SalesmanController extends Controller
             }
 
             $sql = $sql->orderBy('superspv.kd_spv', 'asc')
-                        ->paginate(10);
+                        ->paginate(20);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];

@@ -57,6 +57,7 @@ class CartController extends Controller {
             $header = ['Authorization' => 'Bearer '.$request->get('token')];
             $body = [
                 'ms_dealer_id'  => $request->get('ms_dealer_id'),
+                'page'          => $request->get('page'),
                 'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
