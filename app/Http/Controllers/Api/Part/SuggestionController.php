@@ -193,7 +193,7 @@ class SuggestionController extends Controller
             $result = DB::connection($request->get('divisi'))
                         ->table(DB::raw('('.$sql.') as suggestorder'))
                         ->orderBy('suggestorder.part_number', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $data_suggestion_order = new Collection();
 

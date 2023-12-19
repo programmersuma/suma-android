@@ -41,7 +41,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('typemotor.typemkt', 'asc')
-                    ->paginate(20);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -112,7 +112,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('classprod.kd_class', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -192,7 +192,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('produk.nourut', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -267,7 +267,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderBy('sub.kd_sub', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -413,7 +413,7 @@ class PartController extends Controller {
                 });
             }
 
-            $result = $sql->paginate(20);
+            $result = $sql->paginate(15);
 
             $list_search_part = '';
             $data_part = new Collection();
@@ -851,7 +851,7 @@ class PartController extends Controller {
                     ->where('part_fav.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->whereRaw("isnull(part.del_send, 0)=0")
                     ->orderBy('part_fav.kd_part', 'asc')
-                    ->paginate(20);
+                    ->paginate(15);
 
 
             $list_search_part = '';
@@ -1327,7 +1327,7 @@ class PartController extends Controller {
             }
 
             $sql = $sql->orderByRaw('bo.kd_sales asc, bo.kd_dealer asc, bo.kd_part asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -1599,7 +1599,7 @@ class PartController extends Controller {
                                 isnull(pricelist.ukuran_file, '') as ukuran_file")
                     ->orderBy('pricelist.tanggal', 'desc')
                     ->orderBy('pricelist.nama_file', 'desc')
-                    ->paginate(20);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];

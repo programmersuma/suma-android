@@ -119,7 +119,7 @@ class DealerController extends Controller {
             }
 
             $sql = $sql->orderBy('dealer.kd_dealer', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -280,7 +280,7 @@ class DealerController extends Controller {
             }
 
             $sql = $sql->orderBy('dealer.kd_dealer', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -370,7 +370,7 @@ class DealerController extends Controller {
                                 isnull(competitor.usertime, '') as usertime")
                     ->where('competitor.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderBy('competitor.usertime', 'desc')
-                    ->paginate(20);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -765,7 +765,7 @@ class DealerController extends Controller {
                         ->table(DB::raw('('.$sql.') as jtp'))
                         ->orderBy('jtp.jatuh_tempo', 'asc')
                         ->orderBy('jtp.nomor_faktur', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($query)->toArray();
             $data_result = $result['data'];

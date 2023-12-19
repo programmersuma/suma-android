@@ -61,7 +61,7 @@ class PofController extends Controller
 
             $sql = $sql->groupByRaw("pof.companyid, pof.tgl_pof, pof.no_pof, pof.approve")
                         ->orderByRaw("pof.companyid asc,  pof.approve asc, pof.tgl_pof desc, pof.no_pof desc")
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -219,7 +219,7 @@ class PofController extends Controller
                     ->where('pof_dtl.no_pof', strtoupper(trim($request->get('nomor_pof'))))
                     ->where('pof_dtl.companyid', strtoupper(trim($request->userlogin['companyid'])))
                     ->orderByRaw("pof_dtl.kd_part asc")
-                    ->paginate(20);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];

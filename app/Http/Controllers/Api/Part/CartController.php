@@ -180,7 +180,7 @@ class CartController extends Controller {
                     ->selectRaw("isnull(cart_dtltmp.kd_part, '') as part_number")
                     ->where('cart_dtltmp.kd_key', strtoupper(trim($kode_key)))
                     ->where('cart_dtltmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
-                    ->paginate(20);
+                    ->paginate(15);
 
             $data = $sql->items();
             $next_page = (double)$sql->total() - ((double)$sql->perPage() * $request->get('page'));

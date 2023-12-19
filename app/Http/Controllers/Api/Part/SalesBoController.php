@@ -73,7 +73,7 @@ class SalesBoController extends Controller {
             }
 
             $sql = $sql->orderBy('dealer.kd_dealer', 'asc')
-                        ->paginate(20);
+                        ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -258,7 +258,7 @@ class SalesBoController extends Controller {
                             $join->on('produk.kd_produk', '=', 'sub.kd_produk');
                         });
 
-            $sqlResult = $sqlResult->paginate(20);
+            $sqlResult = $sqlResult->paginate(15);
             $result = collect($sqlResult)->toArray();
             $data_result = $result['data'];
 

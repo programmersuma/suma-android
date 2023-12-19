@@ -111,7 +111,7 @@ class RealisasiVisitController extends Controller {
                     ->where('visit_date.kd_dealer', strtoupper(trim($request->get('code'))))
                     ->where('visit_date.companyid', strtoupper(trim(strtoupper(trim($request->userlogin['companyid'])))))
                     ->orderBy('visit_date.kd_visit','asc')
-                    ->paginate(5);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -318,7 +318,7 @@ class RealisasiVisitController extends Controller {
 
             $sql = $sql->groupBy('visit_date.kd_dealer')
                     ->orderBy('visit_date.kd_dealer','asc')
-                    ->paginate(5);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -600,7 +600,7 @@ class RealisasiVisitController extends Controller {
 
             $sql = $sql->groupBy('visit_date.kd_sales')
                     ->orderBy('visit_date.kd_sales','asc')
-                    ->paginate(5);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
@@ -906,7 +906,7 @@ class RealisasiVisitController extends Controller {
 
             $sql = $sql->groupBy('salesman.spv')
                     ->orderBy('salesman.spv','asc')
-                    ->paginate(5);
+                    ->paginate(15);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
