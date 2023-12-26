@@ -180,6 +180,7 @@ class CartController extends Controller {
                     ->selectRaw("isnull(cart_dtltmp.kd_part, '') as part_number")
                     ->where('cart_dtltmp.kd_key', strtoupper(trim($kode_key)))
                     ->where('cart_dtltmp.companyid', strtoupper(trim($request->userlogin['companyid'])))
+                    ->orderByRaw("isnull(cart_dtltmp.usertime, '') desc")
                     ->paginate(15);
 
             $data = $sql->items();
