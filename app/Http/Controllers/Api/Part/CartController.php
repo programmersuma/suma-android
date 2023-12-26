@@ -288,7 +288,7 @@ class CartController extends Controller {
                                             '".strtoupper(trim($kode_dealer))."'=bo.kd_dealer
                                 left join discp with (nolock) on produk.kd_produk=discp.kd_produk and
                                             discp.cabang=iif(isnull(company.inisial, 0) = 1, 'RK', 'PC')
-                        order by carttmp.kd_part asc";
+                        order by carttmp.usertime desc";
 
                 $result = DB::connection($request->get('divisi'))->select($sql);
 
