@@ -628,6 +628,12 @@ class CartController extends Controller {
                 return ApiResponse::responseWarning('Pilih divisi, dealer Id, part Id, dan prosentase discount terlebih dahulu');
             }
 
+            if($request->get('divisi') == 'sqlsrv_honda') {
+                if((double)$request->get('discount') > 19.00) {
+                    return ApiResponse::responseWarning('Diskon tidak boleh di isi lebih dari 19.00. Hubungi marketing untuk keterangan lebih lanjut');
+                }
+            }
+
             $user_id = strtoupper(trim($request->userlogin['user_id']));
             $companyid = strtoupper(trim($request->userlogin['companyid']));
 
@@ -692,6 +698,12 @@ class CartController extends Controller {
 
             if($validate->fails()) {
                 return ApiResponse::responseWarning('Pilih divisi, dealer Id, dan prosentase discount terlebih dahulu');
+            }
+
+            if($request->get('divisi') == 'sqlsrv_honda') {
+                if((double)$request->get('discount') > 19.00) {
+                    return ApiResponse::responseWarning('Diskon tidak boleh di isi lebih dari 19.00. Hubungi marketing untuk keterangan lebih lanjut');
+                }
             }
 
             $user_id = strtoupper(trim($request->userlogin['user_id']));
