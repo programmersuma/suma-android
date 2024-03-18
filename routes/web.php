@@ -102,6 +102,7 @@ Route::controller(PartController::class)->group(function () {
     Route::post('part/part-favorite', 'listPartFavorite');
     Route::post('part/add-favorite', 'addPartFavorite');
     Route::post('part/list-back-order', 'listBackOrder');
+    Route::post('part/list-back-order-download', 'downloadBackOrder');
     Route::post('part/skema-pembelian', 'skemaPembelian');
     Route::post('part/price-list', 'priceList');
     Route::post('part/ready-stock', 'readyStock');

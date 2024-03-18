@@ -142,25 +142,6 @@ class PartController extends Controller {
         }
     }
 
-    public function listBackOrder(Request $request) {
-        try {
-            $url = 'part/list-back-order';
-            $header = ['Authorization' => 'Bearer '.$request->get('token')];
-            $body = [
-                'page'          => $request->get('page'),
-                'salesman'      => $request->get('salesman'),
-                'dealer'        => $request->get('dealer'),
-                'part_number'   => $request->get('is_love'),
-                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
-            ];
-            $response = ApiRequest::requestPost($url, $header, $body);
-
-            return $response;
-        } catch (\Exception $exception) {
-            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
-        }
-    }
-
     public function checkStock(Request $request) {
         try {
             $url = 'part/check-stock';
@@ -258,6 +239,75 @@ class PartController extends Controller {
                     'message'   => $messageApi,
                     'data'      => [
                         'link_download' => env('APP_URL').'excel/readystock/'.$file_name
+                    ]
+                ];
+            } else {
+                return $responseApi;
+            }
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
+    public function listBackOrder(Request $request) {
+        try {
+            $url = 'part/list-back-order';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'page'          => $request->get('page'),
+                'salesman'      => $request->get('salesman'),
+                'dealer'        => $request->get('dealer'),
+                'part_number'   => $request->get('is_love'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $response = ApiRequest::requestPost($url, $header, $body);
+
+            return $response;
+        } catch (\Exception $exception) {
+            return ApiResponse::responseWarning('Koneksi web hosting tidak terhubung ke server internal '.$exception);
+        }
+    }
+
+    public function downloadBackOrder(Request $request) {
+        try {
+            $url = 'part/list-back-order-download';
+            $header = ['Authorization' => 'Bearer '.$request->get('token')];
+            $body = [
+                'nama_file'     => $request->get('nama_file'),
+                'salesman'      => $request->get('salesman'),
+                'dealer'        => $request->get('dealer'),
+                'part_number'   => $request->get('is_love'),
+                'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
+            ];
+            $responseApi = ApiRequest::requestPost($url, $header, $body);
+            $statusApi = json_decode($responseApi)->status;
+            $messageApi =  json_decode($responseApi)->message[0];
+
+
+            if($statusApi == 1) {
+                $data =  json_decode($responseApi)->data;
+
+                $file_name = trim($request->get('nama_file')).'.xlsx';
+                $file = Excel::store(new ReadyStock($data, $request, $file_name), '/excel/backorder/'.$file_name);
+
+                $filePath = public_path().'/excel/backorder/'.$file_name;
+                $file = new File($filePath);
+
+                $uploadedFile = new UploadedFile(
+                    $file->getRealPath(),
+                    $file->getFilename(),
+                    $file->getMimeType(),
+                    null,
+                    true
+                );
+
+                $uploadedFile->move('excel/backorder', $uploadedFile->getClientOriginalName());
+
+                return [
+                    'status'    => $statusApi,
+                    'message'   => $messageApi,
+                    'data'      => [
+                        'link_download' => env('APP_URL').'excel/backorder/'.$file_name
                     ]
                 ];
             } else {
