@@ -1639,6 +1639,7 @@ class PartController extends Controller {
 
             $filter_salesman = $request->get('salesman');
             $filter_dealer = $request->get('dealer');
+            $filter_produk = $request->get('item_group');
             $filter_part_number = $request->get('part_number');
 
             if ($request->userlogin['role_id'] == "MD_H3_SM") {
@@ -1650,66 +1651,117 @@ class PartController extends Controller {
             }
 
             $sql = DB::connection($request->get('divisi'))->table('bo')->lock('with (nolock)')
-                    ->selectRaw("isnull(bo.kd_sales, '') as 'kode_sales', isnull(salesman.nm_sales, '') as 'nama_sales',
-                                isnull(bo.kd_dealer, '') as 'kode_dealer', isnull(dealer.nm_dealer, '') as 'nama_dealer',
-                                isnull(bo.kd_part, '') as 'part_number', isnull(part.ket, '') as 'nama_part',
-                                isnull(produk.nama, '') as 'produk', isnull(bo.kd_tpc, '') as 'kode_tpc',
-                                isnull(bo.jumlah, 0) as 'jumlah'")
-                    ->leftJoin(DB::raw('salesman with (nolock)'), function($join) {
-                        $join->on('salesman.kd_sales', '=', 'bo.kd_sales')
-                            ->on('salesman.companyid', '=', 'bo.companyid');
-                    })
-                    ->leftJoin(DB::raw('dealer with (nolock)'), function($join) {
-                        $join->on('dealer.kd_dealer', '=', 'bo.kd_dealer')
-                            ->on('dealer.companyid', '=', 'bo.companyid');
-                    })
+                    ->selectRaw("isnull(bo.kd_part, '') as part_number")
                     ->leftJoin(DB::raw('part with (nolock)'), function($join) {
                         $join->on('part.kd_part', '=', 'bo.kd_part')
                             ->on('part.companyid', '=', 'bo.companyid');
                     })
                     ->leftJoin(DB::raw('sub with (nolock)'), function($join) {
                         $join->on('sub.kd_sub', '=', 'part.kd_sub');
-                    })
-                    ->leftJoin(DB::raw('produk with (nolock)'), function($join) {
-                        $join->on('produk.kd_produk', '=', 'sub.kd_produk');
-                    })
-                    ->whereRaw("isnull(bo.jumlah, 0) > 0")
-                    ->where('bo.companyid', strtoupper(trim($request->userlogin['companyid'])));
+                    });
 
-            if (!empty($filter_salesman) || trim($filter_salesman) != '') {
+            if(!empty($filter_salesman) && trim($filter_salesman) != '') {
                 $sql->where('bo.kd_sales', strtoupper(trim($filter_salesman)));
             }
 
-            if (!empty($filter_dealer) || trim($filter_dealer) != '') {
+            if(!empty($filter_dealer) && trim($filter_dealer) != '') {
                 $sql->where('bo.kd_dealer', strtoupper(trim($filter_dealer)));
             }
 
-            if (!empty($filter_part_number) || trim($filter_part_number) != '') {
+            if(!empty($filter_produk) && trim($filter_produk) != '') {
+                $sql->where('sub.kd_produk', strtoupper(trim($filter_produk)));
+            }
+
+            if(!empty($filter_part_number) && trim($filter_part_number) != '') {
                 $sql->where('bo.kd_part', 'like', strtoupper(trim($filter_part_number)).'%');
             }
 
-            $sql = $sql->orderByRaw('bo.kd_sales asc, bo.kd_dealer asc, bo.kd_part asc')
-                        ->paginate(15);
+            $sql = $sql->orderBy('bo.kd_part','asc')
+                        ->paginate(10);
 
             $result = collect($sql)->toArray();
             $data_result = $result['data'];
-            $data_bo = [];
 
-            foreach($data_result as $result) {
-                $data_bo[] = [
-                    'kode_sales'    => trim($result->kode_sales),
-                    'nama_sales'    => trim($result->nama_sales),
-                    'kode_dealer'   => trim($result->kode_dealer),
-                    'nama_dealer'   => trim($result->nama_dealer),
-                    'part_pictures' => config('constants.app.app_images_url').'/'.strtoupper(trim($result->part_number)).'.jpg',
-                    'part_number'   => trim($result->part_number),
-                    'nama_part'     => trim($result->nama_part),
-                    'produk'        => trim($result->produk),
-                    'kode_tpc'      =>trim($result->kode_tpc),
-                    'jumlah_bo'     => (int)$result->jumlah
-                ];
+            $list_part_number = '';
+
+            foreach($data_result as $data) {
+                if(strtoupper(trim($list_part_number)) == '') {
+                    $list_part_number = "'".strtoupper(trim($data->part_number))."'";
+                } else {
+                    $list_part_number .= ",'".strtoupper(trim($data->part_number))."'";
+                }
             }
-            return ApiResponse::responseSuccess('success', $data_bo);
+
+            $data_back_order = [];
+
+            if(strtoupper(trim($list_part_number)) != '') {
+                $sql = "select	isnull(bo.companyid, '') as companyid, isnull(bo.kd_sales, '') as kode_sales,
+                                isnull(bo.nm_sales, '') as nama_sales, isnull(bo.kd_dealer, '') as kode_dealer,
+                                isnull(bo.nm_dealer, '') as nama_dealer, isnull(bo.kd_part, '') as part_number,
+                                isnull(part.ket, '') as nama_part, isnull(produk.nama, '') as produk,
+                                isnull(bo.kd_tpc, '') as kode_tpc, isnull(bo.jumlah, 0) as jumlah_bo
+                        from
+                        (
+                            select	bo.companyid, bo.kd_sales, salesman.nm_sales,
+                                    bo.kd_dealer, dealer.nm_dealer, bo.kd_part,
+                                    bo.kd_tpc, bo.jumlah
+                            from
+                            (
+                                select	bo.companyid, bo.kd_sales, bo.kd_dealer,
+                                        bo.kd_part, bo.jumlah, bo.kd_tpc
+                                from	bo with (nolock)
+                                where	isnull(bo.jumlah, 0) > 0 and
+                                        bo.kd_part in (".$list_part_number.") and
+                                        bo.companyid='".$request->userlogin['companyid']."' ";
+
+                if(!empty($filter_salesman) && trim($filter_salesman) != '') {
+                    $sql .= " and bo.kd_sales='".strtoupper(trim($filter_salesman))."' ";
+                }
+
+                if(!empty($filter_dealer) && trim($filter_dealer) != '') {
+                    $sql .= " and bo.kd_dealer='".strtoupper(trim($filter_dealer))."' ";
+                }
+
+                if(!empty($filter_part_number) && trim($filter_part_number) != '') {
+                    $sql .= " and bo.kd_part like '".strtoupper(trim($filter_part_number))."%'";
+                }
+
+                $sql .= " )	bo
+                                    left join salesman with (nolock) on bo.kd_sales=salesman.kd_sales and
+                                                bo.companyid=salesman.companyid
+                                    left join dealer with (nolock) on bo.kd_dealer=dealer.kd_dealer and
+                                                bo.companyid=dealer.companyid
+                        )	bo
+                                left join part with (nolock) on bo.kd_part=part.kd_part and
+                                            bo.companyid=part.companyid
+                                left join sub with (nolock) on part.kd_sub=sub.kd_sub
+                                left join produk with (nolock) on sub.kd_produk=produk.kd_produk";
+
+                if(!empty($filter_produk) && trim($filter_produk) != '') {
+                    $sql .= " where produk.kd_produk='".strtoupper(trim($filter_produk))."'";
+                }
+
+                $sql .= " order by bo.kd_part asc";
+
+                $data_result = DB::select($sql);
+
+                foreach($data_result as $result) {
+                    $data_back_order[] = [
+                        'kode_sales'    => trim($result->kode_sales),
+                        'nama_sales'    => trim($result->nama_sales),
+                        'kode_dealer'   => trim($result->kode_dealer),
+                        'nama_dealer'   => trim($result->nama_dealer),
+                        'part_pictures' => config('constants.app.app_images_url').'/'.strtoupper(trim($result->part_number)).'.jpg',
+                        'part_number'   => trim($result->part_number),
+                        'nama_part'     => trim($result->nama_part),
+                        'produk'        => trim($result->produk),
+                        'kode_tpc'      =>trim($result->kode_tpc),
+                        'jumlah_bo'     => (int)$result->jumlah_bo
+                    ];
+                }
+            }
+
+            return ApiResponse::responseSuccess('success', $data_back_order);
         } catch (\Exception $exception) {
             return ApiResponse::responseError($request->ip(), 'API', Route::getCurrentRoute()->action['controller'],
                 $request->route()->getActionMethod(), $exception->getMessage(), 'XXX');
@@ -1738,64 +1790,56 @@ class PartController extends Controller {
                 $filter_dealer = $request->userlogin['user_id'];
             }
 
-            $sql = DB::connection($request->get('divisi'))->table('bo')->lock('with (nolock)')
-                    ->selectRaw("isnull(bo.kd_sales, '') as 'kode_sales', isnull(salesman.nm_sales, '') as 'nama_sales',
-                                isnull(bo.kd_dealer, '') as 'kode_dealer', isnull(dealer.nm_dealer, '') as 'nama_dealer',
-                                isnull(bo.kd_part, '') as 'part_number', isnull(part.ket, '') as 'nama_part',
-                                isnull(produk.nama, '') as 'produk', isnull(bo.kd_tpc, '') as 'kode_tpc',
-                                isnull(bo.jumlah, 0) as 'jumlah'")
-                    ->leftJoin(DB::raw('salesman with (nolock)'), function($join) {
-                        $join->on('salesman.kd_sales', '=', 'bo.kd_sales')
-                            ->on('salesman.companyid', '=', 'bo.companyid');
-                    })
-                    ->leftJoin(DB::raw('dealer with (nolock)'), function($join) {
-                        $join->on('dealer.kd_dealer', '=', 'bo.kd_dealer')
-                            ->on('dealer.companyid', '=', 'bo.companyid');
-                    })
-                    ->leftJoin(DB::raw('part with (nolock)'), function($join) {
-                        $join->on('part.kd_part', '=', 'bo.kd_part')
-                            ->on('part.companyid', '=', 'bo.companyid');
-                    })
-                    ->leftJoin(DB::raw('sub with (nolock)'), function($join) {
-                        $join->on('sub.kd_sub', '=', 'part.kd_sub');
-                    })
-                    ->leftJoin(DB::raw('produk with (nolock)'), function($join) {
-                        $join->on('produk.kd_produk', '=', 'sub.kd_produk');
-                    })
-                    ->whereRaw("isnull(bo.jumlah, 0) > 0")
-                    ->where('bo.companyid', strtoupper(trim($request->userlogin['companyid'])));
+            $sql = "select	isnull(bo.kd_sales, '') as salesman, isnull(bo.kd_dealer, '') as dealer,
+                            isnull(bo.kd_part, '') as part_number, isnull(part.ket, '') as description,
+                            isnull(bo.ket, '') as keterangan, isnull(bo.jumlah, 0) as jumlah
+                    from
+                    (
+                        select	*
+                        from	bo with (nolock)
+                        where	bo.companyid='".$request->userlogin['companyid']."' ";
 
-            if (!empty($filter_salesman) || trim($filter_salesman) != '') {
-                $sql->where('bo.kd_sales', strtoupper(trim($filter_salesman)));
+            if(!empty($filter_salesman) && trim($filter_salesman) != '') {
+                $sql .= " and bo.kd_sales='".strtoupper(trim($filter_salesman))."' ";
             }
 
-            if (!empty($filter_dealer) || trim($filter_dealer) != '') {
-                $sql->where('bo.kd_dealer', strtoupper(trim($filter_dealer)));
+            if(!empty($filter_dealer) && trim($filter_dealer) != '') {
+                $sql .= " and bo.kd_dealer='".strtoupper(trim($filter_dealer))."' ";
             }
 
-            if (!empty($filter_part_number) || trim($filter_part_number) != '') {
-                $sql->where('bo.kd_part', 'like', strtoupper(trim($filter_part_number)).'%');
+            if(!empty($filter_part_number) && trim($filter_part_number) != '') {
+                $sql .= " and bo.kd_part like '".strtoupper(trim($filter_part_number))."%'";
             }
 
-            $sql = $sql->orderByRaw('bo.kd_sales asc, bo.kd_dealer asc, bo.kd_part asc')
-                        ->get();
+            $sql .= " )	bo
+                            left join part with (nolock) on bo.kd_part=part.kd_part and
+                                        bo.companyid=part.companyid
+                            left join sub with (nolock) on part.kd_sub=sub.kd_sub
+                            left join produk with (nolock) on sub.kd_produk=produk.kd_produk";
 
-            $result = collect($sql)->toArray();
-            //$data_result = $result['data'];
+            if(!empty($filter_produk) && trim($filter_produk) != '') {
+                $sql .= " where produk.kd_produk='".strtoupper(trim($filter_produk))."%'";
+            }
+
+            $sql .= " order by bo.kd_sales asc, bo.kd_dealer asc, bo.kd_part asc";
+
+
+            $result = DB::connection($request->get('divisi'))->select($sql);
             $data_bo = [];
 
+            $urutan = 0;
+
             foreach($result as $result) {
+                $urutan = (int)$urutan + 1;
+
                 $data_bo[] = [
-                    'kode_sales'    => trim($result->kode_sales),
-                    'nama_sales'    => trim($result->nama_sales),
-                    'kode_dealer'   => trim($result->kode_dealer),
-                    'nama_dealer'   => trim($result->nama_dealer),
-                    'part_pictures' => config('constants.app.app_images_url').'/'.strtoupper(trim($result->part_number)).'.jpg',
+                    'no'            => (int)$urutan,
+                    'salesman'      => trim($result->salesman),
+                    'dealer'        => trim($result->dealer),
                     'part_number'   => trim($result->part_number),
-                    'nama_part'     => trim($result->nama_part),
-                    'produk'        => trim($result->produk),
-                    'kode_tpc'      =>trim($result->kode_tpc),
-                    'jumlah_bo'     => (int)$result->jumlah
+                    'description'   => trim($result->description),
+                    'keterangan'    => trim($result->keterangan),
+                    'jumlah'        => (int)$result->jumlah
                 ];
             }
 

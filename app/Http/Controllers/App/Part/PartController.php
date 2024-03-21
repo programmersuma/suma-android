@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\App\Part;
 
+use App\Exports\BackOrder;
 use App\Helpers\ApiRequest;
 use App\Helpers\ApiResponse;
 use App\Exports\ReadyStock;
@@ -257,6 +258,7 @@ class PartController extends Controller {
                 'page'          => $request->get('page'),
                 'salesman'      => $request->get('salesman'),
                 'dealer'        => $request->get('dealer'),
+                'item_group'    => $request->get('item_group'),
                 'part_number'   => $request->get('is_love'),
                 'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
@@ -276,6 +278,7 @@ class PartController extends Controller {
                 'nama_file'     => $request->get('nama_file'),
                 'salesman'      => $request->get('salesman'),
                 'dealer'        => $request->get('dealer'),
+                'item_group'    => $request->get('item_group'),
                 'part_number'   => $request->get('is_love'),
                 'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
@@ -288,7 +291,7 @@ class PartController extends Controller {
                 $data =  json_decode($responseApi)->data;
 
                 $file_name = trim($request->get('nama_file')).'.xlsx';
-                $file = Excel::store(new ReadyStock($data, $request, $file_name), '/excel/backorder/'.$file_name);
+                $file = Excel::store(new BackOrder($data, $request, $file_name), '/excel/backorder/'.$file_name);
 
                 $filePath = public_path().'/excel/backorder/'.$file_name;
                 $file = new File($filePath);
