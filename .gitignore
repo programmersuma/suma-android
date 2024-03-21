@@ -4,6 +4,7 @@
 /public/hot
 /public/storage
 /public/assets/pdf
+/public/excel/backorder
 /public/excel/readystock
 /public/excel/upload
 /storage/*.key
