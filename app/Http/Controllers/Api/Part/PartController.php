@@ -1676,7 +1676,8 @@ class PartController extends Controller {
                 $sql->where('bo.kd_part', 'like', strtoupper(trim($filter_part_number)).'%');
             }
 
-            $sql = $sql->orderBy('bo.kd_part','asc')
+            $sql = $sql->groupBy('bo.kd_part')
+                        ->orderBy('bo.kd_part','asc')
                         ->paginate(10);
 
             $result = collect($sql)->toArray();
@@ -1797,7 +1798,8 @@ class PartController extends Controller {
                     (
                         select	*
                         from	bo with (nolock)
-                        where	bo.companyid='".$request->userlogin['companyid']."' ";
+                        where	isnull(bo.jumlah, 0) > 0 and
+                                bo.companyid='".$request->userlogin['companyid']."' ";
 
             if(!empty($filter_salesman) && trim($filter_salesman) != '') {
                 $sql .= " and bo.kd_sales='".strtoupper(trim($filter_salesman))."' ";
