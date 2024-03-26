@@ -1744,7 +1744,7 @@ class PartController extends Controller {
 
                 $sql .= " order by bo.kd_part asc";
 
-                $data_result = DB::select($sql);
+                $data_result = DB::connection($request->get('divisi'))->select($sql);
 
                 foreach($data_result as $result) {
                     $data_back_order[] = [
