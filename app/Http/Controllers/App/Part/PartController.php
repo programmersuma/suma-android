@@ -259,7 +259,7 @@ class PartController extends Controller {
                 'salesman'      => $request->get('salesman'),
                 'dealer'        => $request->get('dealer'),
                 'item_group'    => $request->get('item_group'),
-                'part_number'   => $request->get('is_love'),
+                'part_number'   => $request->get('part_number'),
                 'divisi'        => (strtoupper(trim($request->get('divisi'))) == 'HONDA') ? 'sqlsrv_honda' : 'sqlsrv_general'
             ];
             $response = ApiRequest::requestPost($url, $header, $body);
