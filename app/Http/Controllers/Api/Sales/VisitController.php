@@ -31,7 +31,7 @@ class VisitController extends Controller
                             isnull(visit.tanggal, '') as date_must_checkin
                 from
                 (
-                    select  top 1 visit_date.companyid, visit_date.kd_visit,
+                    select  visit_date.companyid, visit_date.kd_visit,
                             visit_date.kd_sales, visit_date.kd_dealer
                     from    visit_date with (nolock)
                     where   visit_date.kd_sales=? and
@@ -43,6 +43,7 @@ class VisitController extends Controller
                                     visit_date.companyid=visit.companyid
                         inner join dealer with (nolock) on visit_date.kd_dealer=dealer.kd_dealer and
                                     visit_date.companyid=dealer.companyid
+                where	visit.check_out is null
                 order by visit.check_in asc";
 
             $result = DB::connection($request->get('divisi'))->select($sql, [ strtoupper(trim($request->userlogin['user_id'])), strtoupper(trim($request->userlogin['companyid'])) ]);
