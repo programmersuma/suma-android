@@ -436,7 +436,7 @@ class DealerController extends Controller {
                 $file_image = str_replace(' ', '+', $convertImage);
                 $file_name = trim($request->userlogin['user_id']).'-'.time().'-'.Str::random(10).'.'.'png';
                 File::put(public_path('assets/images/competitor/') . $file_name, base64_decode($file_image));
-                $location_file =  env('APP_URL') .'/assets/images/competitor/' . $file_name;
+                $location_file =  config('constants.app.app_url_hosting') .'/assets/images/competitor/' . $file_name;
 
                 $data_photo[] = [
                     'photo' => $location_file

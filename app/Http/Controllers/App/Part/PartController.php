@@ -239,7 +239,7 @@ class PartController extends Controller {
                     'status'    => $statusApi,
                     'message'   => $messageApi,
                     'data'      => [
-                        'link_download' => env('APP_URL').'excel/readystock/'.$file_name
+                        'link_download' => config('constants.app.app_url_hosting').'/excel/readystock/'.$file_name
                     ]
                 ];
             } else {
@@ -310,7 +310,7 @@ class PartController extends Controller {
                     'status'    => $statusApi,
                     'message'   => $messageApi,
                     'data'      => [
-                        'link_download' => env('APP_URL').'excel/backorder/'.$file_name
+                        'link_download' => config('constants.app.app_url_hosting').'/excel/backorder/'.$file_name
                     ]
                 ];
             } else {
