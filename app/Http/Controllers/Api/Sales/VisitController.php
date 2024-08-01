@@ -107,7 +107,7 @@ class VisitController extends Controller
                     ->where('visit_date.kd_sales', strtoupper(trim($request->userlogin['user_id'])))
                     ->where('visit_date.kd_dealer', strtoupper(trim($kode_dealer)))
                     ->whereRaw("isnull(visit_date.checkin, 0)=0 and
-                                visit_date.tanggal >= convert(date, dateadd(month, -1, getdate()), 111)")
+                                visit_date.tanggal >= convert(date, getdate(), 111)")
                     ->orderBy('visit_date.tanggal', 'asc')
                     ->get();
 
